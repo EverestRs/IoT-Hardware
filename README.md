@@ -312,9 +312,9 @@ include_dirs中指定source所需要依赖的.h文件路径。
 ## Hi3861的内核开发
 **内核开发文档编写主要借鉴：**
 > [OpenHarmony智能开发套件[内核编程·上]](https://ost.51cto.com/posts/23938)  
-> [OpenHarmony智能开发套件[内核编程·下]](https://ost.51cto.com/posts/23997)
-> [BearPi-HM_Nano案例开发](https://gitee.com/bearpi/bearpi-hm_nano/blob/master/applications/BearPi/BearPi-HM_Nano/sample/README.md#/bearpi/bearpi-hm_nano/blob/master/applications/BearPi/BearPi-HM_Nano/sample/A1_kernal_thread/README.md)
-> [openharmony编写“Hello World”程序](https://docs.openharmony.cn/pages/v4.0/zh-cn/device-dev/quick-start/quickstart-ide-3861-helloworld.md/)
+> [OpenHarmony智能开发套件[内核编程·下]](https://ost.51cto.com/posts/23997)  
+> [BearPi-HM_Nano案例开发](https://gitee.com/bearpi/bearpi-hm_nano/blob/master/applications/BearPi/BearPi-HM_Nano/sample/README.md#/bearpi/bearpi-hm_nano/blob/master/applications/BearPi/BearPi-HM_Nano/sample/A1_kernal_thread/README.md)  
+> [openharmony编写“Hello World”程序](https://docs.openharmony.cn/pages/v4.0/zh-cn/device-dev/quick-start/quickstart-ide-3861-helloworld.md/)  
 
 ### 线程的使用
 在我们初次接触到openharmony轻量系统开发（hi3861开发）的时候，第一个接触的肯定是如何使用线程来完成我们的任务，那么接下来就让我们开始利用线程来跟他说一声“Hello,openharmony!”

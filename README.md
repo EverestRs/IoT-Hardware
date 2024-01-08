@@ -49,7 +49,7 @@
 ### 附：导入SDK和工程源码
     说明：在下载时可能会出现下载失败，这里可以将这种情况解决
 - 选择工程源码，这里我们先下载`Dev-Tool`和`hi3861_hdu_iot`(SDK)，这里可直接通过网盘进行下载[Hi3861环境](https://cloud.189.cn/t/r2QBNr2umqUv )（访问码：r3kc）
-    > `Dev-Tool` 在 `hi3861环境/DevTools/DevTools_Hi3861V100.zip`
+    > `Dev-Tool` 在 `hi3861环境/DevTools/DevTools_Hi3861V100.zip`  
     > `hi3861_hdu_iot` 在 `hi3861环境/hi3861_hdu_iot/0001.zip`
 
 - 将两个压缩包解压后，先将工程源码导入到DevEco Device Tool，

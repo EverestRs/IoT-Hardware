@@ -16,7 +16,7 @@
 
 ### windows下的DevEco Device Tool开发环境搭建
 
-- 下载DevEco Device Tool最新`Windows`版本软件包。
+- 下载[DevEco Device Tool](https://device.harmonyos.com/cn/develop/ide#download)最新`Windows`版本软件包。
 
 - 解压DevEco Device Tool压缩包，双击安装包程序，单击下一步进行安装。
 

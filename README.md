@@ -78,6 +78,249 @@
     > 源码一开始的`applcations`子系统编译的是`wifi_iot_sample_app`组件，其组件的Build.gn只有编译`startup`这个业务模块，所以我们初学者不需要对源码进行修改就可以验证环境的完备性
 
     ![Alt text](./图床/9.png)
+
+## Hi3861打印hello world！（第一个实操案例）
+
+### 确定目录结构
+
+开发者编写业务代码时，务必先在`./applications/sample/wifi-iot/app`路径下新建一个目录（或一套目录结构），用于存放业务源码文件。
+
+例如：在`app`下新增业务`my_first_app`，其中`hello_world.c`为业务代码，`BUILD.gn`为编译脚本，具体规划目录结构如下：
+```
+.
+└── applications
+    └── sample
+        └── wifi-iot
+            └── app
+                └── my_first_app
+                  │── hello_world.c
+                  └── BUILD.gn
+.
+└── applications
+    └── sample
+        └── wifi-iot
+            └── app
+                └── my_first_app
+                  │── hello_world.c
+                  └── BUILD.gn
+```
+
+### 编写业务代码
+
+新建`./applications/sample/wifi-iot/app/my_first_app`下的`hello_world.c`文件，在hello_world.c中新建业务入口函数HelloWorld，并实现业务逻辑。并在代码最下方，使用OpenHarmony启动恢复模块接口`SYS_RUN()`启动业务。（SYS_RUN定义在`ohos_init.h`文件中）
+```c
+#include <stdio.h>
+#include "ohos_init.h"
+#include "ohos_types.h"
+
+void HelloWorld(void)
+{
+    printf("[DEMO] Hello world.\n");
+}
+SYS_RUN(HelloWorld);
+#include <stdio.h>
+#include "ohos_init.h"
+#include "ohos_types.h"
+
+void HelloWorld(void)
+{
+    printf("[DEMO] Hello world.\n");
+}
+SYS_RUN(HelloWorld);
+```
+
+编写用于将业务构建成静态库的`BUILD.gn`文件。
+
+新建`./applications/sample/wifi-iot/app/my_first_app`下的`BUILD.gn`文件，并完成如下配置。
+
+如步骤1所述，BUILD.gn文件由三部分内容（目标、源文件、头文件路径）构成，需由开发者完成填写。
+```
+static_library("myapp") {
+    sources = [
+        "hello_world.c"
+    ]
+    include_dirs = [
+        "//utils/native/lite/include"
+    ]
+}
+static_library("myapp") {
+    sources = [
+        "hello_world.c"
+    ]
+    include_dirs = [
+        "//utils/native/lite/include"
+    ]
+}
+```
+static_library中指定业务模块的编译结果，为静态库文件libmyapp.a，开发者根据实际情况完成填写。
+sources中指定静态库.a所依赖的.c文件及其路径，若路径中包含"//“则表示绝对路径（此处为代码根路径），若不包含”//"则表示相对路径。
+include_dirs中指定source所需要依赖的.h文件路径。
+
+### 添加新组件
+
+修改文件`build/lite/components/applications.json`，添加组件`hello_world_app`的配置，如下所示为`applications.json`文件片段，"##start##“和”##end##“之间为新增配置（”##start##“和”##end##"仅用来标识位置，添加完配置后删除这两行）：
+> 说明： 本章节操作是以OpenHarmony-v3.1-Release版本为例进行操作的，该版本中，组件配置文件为`build/lite/components/applications.json`；若源码版本大于等于OpenHarmony 3.2 Beta2时，组件配置文件为`build/lite/components/communication.json`。
+```json
+{
+  "components": [
+    {
+      "component": "camera_sample_communication",
+      "description": "Communication related samples.",
+      "optional": "true",
+      "dirs": [
+        "applications/sample/camera/communication"
+      ],
+      "targets": [
+        "//applications/sample/camera/communication:sample"
+      ],
+      "rom": "",
+      "ram": "",
+      "output": [],
+      "adapted_kernel": [ "liteos_a" ],
+      "features": [],
+      "deps": {
+        "components": [],
+        "third_party": []
+      }
+    },
+##start##
+    {
+      "component": "hello_world_app",
+      "description": "hello world samples.",
+      "optional": "true",
+      "dirs": [
+        "applications/sample/wifi-iot/app/my_first_app"
+      ],
+      "targets": [
+        "//applications/sample/wifi-iot/app/my_first_app:myapp"
+      ],
+      "rom": "",
+      "ram": "",
+      "output": [],
+      "adapted_kernel": [ "liteos_m" ],
+      "features": [],
+      "deps": {
+        "components": [],
+        "third_party": []
+      }
+    },
+##end##
+    {
+      "component": "camera_sample_app",
+      "description": "Camera related samples.",
+      "optional": "true",
+      "dirs": [
+        "applications/sample/camera/launcher",
+        "applications/sample/camera/cameraApp",
+        "applications/sample/camera/setting",
+        "applications/sample/camera/gallery",
+        "applications/sample/camera/media"
+      ],
+```
+### 修改单板配置文件
+
+修改文件`vendor/hisilicon/hispark_pegasus/config.json`，新增`hello_world_app`组件的条目，如下所示代码片段为`applications`子系统配置，"##start##“和”##end##“之间为新增条目（”##start##“和”##end##"仅用来标识位置，添加完配置后删除这两行）：
+```
+      {
+        "subsystem": "applications",
+        "components": [
+##start##
+          { "component": "hello_world_app", "features":[] },
+##end##
+          { "component": "wifi_iot_sample_app", "features":[] }
+        ]
+      },
+```
+
+### 编译
+按照上面的步骤点击`Rebuild`，显示`success bulid`的字样。
+    ![Alt text](./图床/9.png)
+
+### 烧录
+我们将bearpi（hi3861开发板）连接电脑
+## Hi3861的简单编译流程说明
+在上面我们提到了子系统，组件，业务模块等，这些都是我们openharmony框架的概念，这里我们不做过多的赘述。我们主要讲一讲openharmony是怎么知道我们要编译那一个文件夹。
+
+首先，给大家讲解一下openharmony启动流程。
+```
+阶段1：core 内核启动
+
+阶段2：core system service 内核系统服务
+
+阶段3：core system feature 内核系统特性
+
+阶段4：system startup 系统启动
+
+阶段5：system service 系统服务
+
+阶段6：system future 系统特性
+
+阶段7：application-layer service 应用层服务
+
+阶段8：application-layer feature 应用层特性
+```
+上述八个阶段是从编译器开始build文件，然后一步一步传入到主板让主板进行编译的过程。
+
+我们不需要完全了解整个的编译流程，我们只需要懂得从子系统开始后面怎么走的就可以了。
+
+- 我们打开`/src/vendor/bearpi/bearpi_hm_nano/config.json`，这个是bearpi的子系统配置文件，我这里只选取部分作为展示。大家可以看到在我注释的地方有两个单词`applications`和`wifi_iot_sample_app`
+    ```c
+    {
+    "product_name": "bearpi_hm_nano",
+    "ohos_version": "OpenHarmony 1.0",
+    "device_company": "bearpi",
+    "board": "bearpi_hm_nano",
+    "kernel_type": "liteos_m",
+    "kernel_version": "",
+    "subsystems": [
+      {
+        "subsystem": "applications",  //子系统名称
+        "components": [
+          { "component": "wifi_iot_sample_app", "features":[] }  //组件名称
+        ]
+      },
+      {
+        "subsystem": "iot_hardware",
+        "components": [
+          { "component": "iot_controller", "features":[] }
+        ]
+      },
+      {
+        "subsystem": "hiviewdfx",
+        "components": [
+          { "component": "hilog_lite", "features":[] }
+        ]
+      },
+      {
+        "subsystem": "distributed_schedule",
+        "components": [
+          { "component": "samgr_lite", "features":[] }
+        ]
+      },
+      {
+        "subsystem": "security",
+        "components": [
+          { "component": "hichainsdk", "features":[] },
+          { "component": "deviceauth_lite", "features":[] },
+          { "component": "huks", "features":
+            [
+              "disable_huks_binary = false",
+              "disable_authenticate = false",
+    ```
+- 
+
+## Hi3861的内核开发
+**内核开发文档编写主要借鉴：**
+> [OpenHarmony智能开发套件[内核编程·上]](https://ost.51cto.com/posts/23938)  
+> [OpenHarmony智能开发套件[内核编程·下]](https://ost.51cto.com/posts/23997)
+> [BearPi-HM_Nano案例开发](https://gitee.com/bearpi/bearpi-hm_nano/blob/master/applications/BearPi/BearPi-HM_Nano/sample/README.md#/bearpi/bearpi-hm_nano/blob/master/applications/BearPi/BearPi-HM_Nano/sample/A1_kernal_thread/README.md)
+> [openharmony编写“Hello World”程序](https://docs.openharmony.cn/pages/v4.0/zh-cn/device-dev/quick-start/quickstart-ide-3861-helloworld.md/)
+
+### 线程的使用
+在我们初次接触到openharmony轻量系统开发（hi3861开发）的时候，第一个接触的肯定是如何使用线程来完成我们的任务，那么接下来就让我们开始利用线程来跟他说一声“Hello,openharmony!”
+
+#### 
+
 ### 说明
     
 

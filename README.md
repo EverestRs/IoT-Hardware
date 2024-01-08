@@ -46,13 +46,38 @@
 
 - **注意：** 如果没有源码下载成功，我在Hi3861文件夹中提供的有SDK的压缩包和源码环境的压缩包，可以自行进行导入
 
-### 附：导入SDK和工程源码
+### 附：导入SDK和编译工具包
     说明：在下载时可能会出现下载失败，这里可以将这种情况解决
-- 选择工程源码，这里我们先下载`Dev-Tool`和`hi3861_hdu_iot`(SDK)，这里可直接通过网盘进行下载[Hi3861环境](https://cloud.189.cn/t/r2QBNr2umqUv )（访问码：r3kc）
+- 选择工程源码，这里我们先下载`Dev-Tool`（工具包）和`hi3861_hdu_iot`（SDK），这里可直接通过网盘进行下载[Hi3861环境](https://cloud.189.cn/t/r2QBNr2umqUv )（访问码：r3kc）
     > `Dev-Tool` 在 `hi3861环境/DevTools/DevTools_Hi3861V100.zip`  
     > `hi3861_hdu_iot` 在 `hi3861环境/hi3861_hdu_iot/0001.zip`
 
-- 将两个压缩包解压后，先将工程源码导入到DevEco Device Tool，
+- 将两个压缩包解压后，先将工程源码导入到DevEco Device Tool
+    ![Alt text](./图床/3.png)  
+  
+- 然后点击DevEco Device Tool的工程配置，查看工具包是否安装，没有安装可以点击下载，下载成功就配置好了，如果下载失败请继续跟着文档往下走
+    ![Alt text](./图床/4.png)
+
+- 点击hi3861，点击`compiler_bin_path`
+    ![Alt text](./图床/5.png)
+
+- 这里主要是配置编译工具的路径，其实主要是`env_start.bat`的作用
+    ![Alt text](./图床/7.png)  
+    ![Alt text](./图床/6.png)
+
+- 这里我打开一下`env_start.bat`，给你们看一下hi3861的编译环境（命令行），基于Hb框架
+    ![Alt text](./图床/8.png)
+
+- 到此我们的SDK和工具包已经配置完成！下面我们就可以愉快的进行Hi3861的开发了！
+    > 如果还是有问题请提交一个issue！
+
+### 验证环境
+    说明：这里我们对于工具包的验证只有编译层面的，对于烧录我们不做验证
+
+- 源码什么都不需要更改，我们点击`DevEco Device Tool`工具界面，在下方的`project tasks`中点击`Rebuild`，然后开始编译，出现以下画面则证明编译成功！  
+    > 源码一开始的`applcations`子系统编译的是`wifi_iot_sample_app`组件，其组件的Build.gn只有编译`startup`这个业务模块，所以我们初学者不需要对源码进行修改就可以验证环境的完备性
+
+    ![Alt text](./图床/9.png)
 ### 说明
     
 

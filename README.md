@@ -237,33 +237,43 @@ include_dirs中指定source所需要依赖的.h文件路径。
     ![Alt text](./图床/9.png)
 
 ### 烧录
-我们将bearpi（hi3861开发板）连接电脑
+我们将bearpi（hi3861开发板）连接电脑后点击`hi3861`，然后点击`upload_port`，选择带有ch340的串口，如果没有ch340的标识，可能你没有安装ch340的串口驱动，这里我提供以下网盘下载链接 [CH340驱动下载](https://cloud.189.cn/t/zyAny2JjiAzq) （访问码：rgd6）
+   ![Alt text](./图床/10.png)
+
+**注意：选好port后就可以点击`project tasks`的`Upload`按钮，在出现`continue`的时候，按下bearpi上的复位按钮**
+
+## 串口查看
+点击`Monitor`后按下bearpi的复位按键，就可以查看打印出来的Hello world啦
+
+
 ## Hi3861的简单编译流程说明
 在上面我们提到了子系统，组件，业务模块等，这些都是我们openharmony框架的概念，这里我们不做过多的赘述。我们主要讲一讲openharmony是怎么知道我们要编译那一个文件夹。
 
 首先，给大家讲解一下openharmony启动流程。
-```
-阶段1：core 内核启动
+  ```
+  阶段1：core 内核启动
 
-阶段2：core system service 内核系统服务
+  阶段2：core system service 内核系统服务
 
-阶段3：core system feature 内核系统特性
+  阶段3：core system feature 内核系统特性
 
-阶段4：system startup 系统启动
+  阶段4：system startup 系统启动
 
-阶段5：system service 系统服务
+  阶段5：system service 系统服务
 
-阶段6：system future 系统特性
+  阶段6：system future 系统特性
 
-阶段7：application-layer service 应用层服务
+  阶段7：application-layer service 应用层服务
 
-阶段8：application-layer feature 应用层特性
-```
+  阶段8：application-layer feature 应用层特性
+  ```
 上述八个阶段是从编译器开始build文件，然后一步一步传入到主板让主板进行编译的过程。
 
 我们不需要完全了解整个的编译流程，我们只需要懂得从子系统开始后面怎么走的就可以了。
 
-- 我们打开`/src/vendor/bearpi/bearpi_hm_nano/config.json`，这个是bearpi的子系统配置文件，我这里只选取部分作为展示。大家可以看到在我注释的地方有两个单词`applications`和`wifi_iot_sample_app`
+- 我们打开`/src/vendor/bearpi/bearpi_hm_nano/config.json`，这个是bearpi的子系统配置文件，我这里只选取部分作为展示。大家可以看到在我注释的地方有两个单词`applications`和  `wifi_iot_sample_app`，有没有比较熟悉，没错，他就是我们在hello world案例中的 applcations 和 app 文件夹！证明我们编写的代码是在applications这一个子系统下的，并且是在wifi_iot_sample_app这个组件下的。
+  > subsystem：子系统  
+  > component：组件
     ```c
     {
     "product_name": "bearpi_hm_nano",
@@ -307,8 +317,45 @@ include_dirs中指定source所需要依赖的.h文件路径。
               "disable_huks_binary = false",
               "disable_authenticate = false",
     ```
-- 
+- 不过为什么组件是wifi_iot_sample_app这一大长串的，但是我们是在app文件夹下添加我们的业务代码呢？好问题！这就要看另一个文件了，`build/lite/components/applications.json`，我截取里面包含wifi_iot_sample_app的这一段，可以看到`dirs`指向`applications/sample/wifi-iot/app`的app文件夹，他的`targets`也是app文件夹的位置，也就是说这个组件的名字虽然叫`wifi_iot_sample_app`，但是实际起作用的是app文件夹下的业务代码模块。
+  > dirs：路径  
+    targets：目标
 
+  ```json
+      "adapted_kernel": [ "liteos_a" ],
+      "features": [],
+      "deps": {}
+    },
+    {
+      "component": "wifi_iot_sample_app",
+      "description": "Wifi iot samples.",
+      "optional": "true",
+      "dirs": [
+        "applications/sample/wifi-iot/app"    //目标文件夹路径
+      ],
+      "targets": [
+        "//applications/sample/wifi-iot/app"  //目标文件夹
+      ],
+      "rom": "",
+      "ram": "",
+      "output": [],
+      "adapted_board": [ "hi3861v100" ],
+      "adapted_kernel": [ "liteos_m" ],
+      "features": [],
+      "deps": {
+          "components": [
+            "utils_base"
+        ]
+      }
+    },
+    {
+      "component": "kit_framework",
+      "description": "",
+      "optional": "true",
+      "dirs": [
+        "applications/kit_framework"
+  ```
+- 然后我们在去看app文件夹下的`Build.gn`文件，
 ## Hi3861的内核开发
 **内核开发文档编写主要借鉴：**
 > [OpenHarmony智能开发套件[内核编程·上]](https://ost.51cto.com/posts/23938)  

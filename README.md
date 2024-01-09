@@ -284,7 +284,7 @@ openharmony是怎么执行这8个阶段的，首先ohos_init.h定义了8个宏�
 - 我们打开`/src/vendor/bearpi/bearpi_hm_nano/config.json`，这个是bearpi的子系统配置文件，我这里只选取部分作为展示。大家可以看到在我注释的地方有两个单词`applications`和  `wifi_iot_sample_app`，有没有比较熟悉，没错，他就是我们在hello world案例中的 applcations 和 app 文件夹！证明我们编写的代码是在applications这一个子系统下的，并且是在wifi_iot_sample_app这个组件下的。
   > subsystem：子系统  
   > component：组件
-    ```json
+    ```
     {
     "product_name": "bearpi_hm_nano",
     "ohos_version": "OpenHarmony 1.0",
@@ -322,7 +322,7 @@ openharmony是怎么执行这8个阶段的，首先ohos_init.h定义了8个宏�
         "components": [
           { "component": "hichainsdk", "features":[] },
           { "component": "deviceauth_lite", "features":[] },
-   --+-       { "component": "huks", "features":
+          { "component": "huks", "features":
             [
               "disable_huks_binary = false",
               "disable_authenticate = false",
@@ -331,7 +331,7 @@ openharmony是怎么执行这8个阶段的，首先ohos_init.h定义了8个宏�
   > dirs：路径  
     targets：目标
 
-  ```json
+  ```
       "adapted_kernel": [ "liteos_a" ],
       "features": [],
       "deps": {}

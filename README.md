@@ -294,9 +294,9 @@ openharmony是怎么执行这8个阶段的，首先ohos_init.h定义了8个宏�
     "kernel_version": "",
     "subsystems": [
       {
-        "subsystem": "applications",  //子系统名称
+        "subsystem": "applications",  # 子系统名称
         "components": [
-          { "component": "wifi_iot_sample_app", "features":[] }  //组件名称
+          { "component": "wifi_iot_sample_app", "features":[] }  # 组件名称
         ]
       },
       {

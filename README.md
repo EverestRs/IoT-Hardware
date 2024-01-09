@@ -269,6 +269,16 @@ include_dirs中指定source所需要依赖的.h文件路径。
   ```
 上述八个阶段是从编译器开始build文件，然后一步一步传入到主板让主板进行编译的过程。
 
+openharmony是怎么执行这8个阶段的，首先ohos_init.h定义了8个宏，用于让一个函数以“优先级2”在系统启动过程的1-8阶段执行。这里涉及到一个优先级问题，在系统启动的某个阶段，会有多个函数被调用，优先级决定了调用顺序。
+```
+优先级范围：0-4。
+
+优先级顺序：0, 1, 2, 3, 4。
+```
+
+上述就是程序编译的优先顺序。
+即函数会被标记为入口，在系统启动过程的1-8阶段，以“优先级2”被调用。
+
 我们不需要完全了解整个的编译流程，我们只需要懂得从子系统开始后面怎么走的就可以了。
 
 - 我们打开`/src/vendor/bearpi/bearpi_hm_nano/config.json`，这个是bearpi的子系统配置文件，我这里只选取部分作为展示。大家可以看到在我注释的地方有两个单词`applications`和  `wifi_iot_sample_app`，有没有比较熟悉，没错，他就是我们在hello world案例中的 applcations 和 app 文件夹！证明我们编写的代码是在applications这一个子系统下的，并且是在wifi_iot_sample_app这个组件下的。
@@ -312,7 +322,7 @@ include_dirs中指定source所需要依赖的.h文件路径。
         "components": [
           { "component": "hichainsdk", "features":[] },
           { "component": "deviceauth_lite", "features":[] },
-          { "component": "huks", "features":
+   --+-       { "component": "huks", "features":
             [
               "disable_huks_binary = false",
               "disable_authenticate = false",
@@ -327,7 +337,7 @@ include_dirs中指定source所需要依赖的.h文件路径。
       "deps": {}
     },
     {
-      "component": "wifi_iot_sample_app",
+      "component": "wifi_iot_sample_app",     //组件名字
       "description": "Wifi iot samples.",
       "optional": "true",
       "dirs": [
@@ -355,7 +365,44 @@ include_dirs中指定source所需要依赖的.h文件路径。
       "dirs": [
         "applications/kit_framework"
   ```
-- 然后我们在去看app文件夹下的`Build.gn`文件，
+- 然后我们在去看app文件夹下的`Build.gn`文件，这里你可能会对这个文件产生疑惑，我会对其讲解一下，这里我们先专心编译流程。这里我们看到lite_component("app")的app，说明这个gn文件是是配置app文件夹的，下面的startup就是我们需要编译的业务模块。
+  我们在上面的时候创建hello wprld业务的时候在hello world的文件夹里面也创建了一个Build.gn文件，其实我们在app的Build.gn文件中的`features`板块中应该填写`业务文件夹名称 : 业务Build.gn名称`，但是startup的Build.gn名字与文件夹的名字重了，所以可以只用写一个startup
+  ```
+  # app的Build.gn
+    import("//build/lite/config/component/lite_component.gni") # 配置 Go 语言的工具链的脚本文件
+
+    lite_component("app") {    # 编译文件夹名称是app
+        features = [
+            "startup",   # startup的Build.gn名字与文件夹的名字重了，所以可以只用写一个startup
+        ]
+    }
+  ```
+  ```
+  # startup的Build.gn
+    source_set("startup") {    # 业务Build.gn名称是startup
+      sources = [
+
+      ]
+
+      include_dirs = [ ]
+  }
+  ```
+
+- 因为startup的Build.gn不是很完整，这里我们使用demolink的Build.gn做讲解，`static_library`是静态库的意思，在这里面填的就是业务Build.gn的名字，`sources`板块是我们在这个业务模块里需要编译的源文件，`include_dirs`是我们所有源文件需要的头文件（库文件）的路径
+  ```
+    static_library("example_demolink") {      # 业务Build.gn的名字是example_demolink
+      sources = [
+          "helloworld.c"    # 需要编译的源文件
+      ]
+
+      include_dirs = [        # 源文件需要的头文件（库文件）的路径
+          "//utils/native/lite/include",
+          "//domains/iot/link/libbuild"
+      ]
+  }
+  ```
+- 最后我们总结一下，一开始我们是在`config.json`里面子系统的组件到`applications.json`里面的`wifi_iot_sample_app`的app文件夹，再到app文件夹下的Build.gn，再到业务模块里面的Build.gn
+
 ## Hi3861的内核开发
 **内核开发文档编写主要借鉴：**
 > [OpenHarmony智能开发套件[内核编程·上]](https://ost.51cto.com/posts/23938)  

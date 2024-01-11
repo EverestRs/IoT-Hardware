@@ -1,4 +1,5 @@
 # 硬件学习仓库
+[TOC]
 
 ## 前言
 
@@ -242,14 +243,14 @@ include_dirs中指定source所需要依赖的.h文件路径。
 
 **注意：选好port后就可以点击`project tasks`的`Upload`按钮，在出现`continue`的时候，按下bearpi上的复位按钮**
 
-## 串口查看
+### 串口查看
 点击`Monitor`后按下bearpi的复位按键，就可以查看打印出来的Hello world啦
 
 
 ## Hi3861的简单编译流程说明
 在上面我们提到了子系统，组件，业务模块等，这些都是我们openharmony框架的概念，这里我们不做过多的赘述。我们主要讲一讲openharmony是怎么知道我们要编译那一个文件夹。
 
-首先，给大家讲解一下openharmony启动流程。
+首先，给大家看一下openharmony启动流程。
   ```
   阶段1：core 内核启动
 
@@ -267,7 +268,9 @@ include_dirs中指定source所需要依赖的.h文件路径。
 
   阶段8：application-layer feature 应用层特性
   ```
-上述八个阶段是从编译器开始build文件，然后一步一步传入到主板让主板进行编译的过程。
+上述八个阶段是从编译器开始build文件，然后一步一步
+
+传入到主板让主板进行编译的过程。
 
 openharmony是怎么执行这8个阶段的，首先ohos_init.h定义了8个宏，用于让一个函数以“优先级2”在系统启动过程的1-8阶段执行。这里涉及到一个优先级问题，在系统启动的某个阶段，会有多个函数被调用，优先级决定了调用顺序。
 ```
@@ -278,6 +281,53 @@ openharmony是怎么执行这8个阶段的，首先ohos_init.h定义了8个宏�
 
 上述就是程序编译的优先顺序。
 即函数会被标记为入口，在系统启动过程的1-8阶段，以“优先级2”被调用。
+
+**ohos_init.h定义的8个宏**  
+```
+CORE_INIT()： 阶段1. core
+
+SYS_SERVICE_INIT()： 阶段2. core systemservice
+
+SYS_FEATURE_INIT()： 阶段3. core system feature
+
+SYS_RUN()： 阶段4. system startup
+
+SYSEX_SERVICE_INIT()： 阶段5. system service
+
+SYSEX_FEATURE_INIT()： 阶段6. system feature
+
+APP_SERVICE_INIT()： 阶段7. application-layer service
+
+APP_FEATURE_INIT()： 阶段8. application-layer feature
+```
+
+这里大家可以看一下openharmony的编译相关文件，这个在`src/bulid/lite`路径下
+```
+build / lite
+├── components # 组件描述文件
+├── config # 编译相关的配置项
+│ ├── component # 组件相关的模板定义
+│ ├── kernel # 内核的编译配置参数
+│ └── subsystem # 子系统模板
+├── figures # readme中的图片
+├── hb # hb pip安装包源码
+├── make_rootfs # 文件系统镜像制作脚本
+├── ndk # Native API相关编译脚本与配置参数
+├── platform # ld脚本
+├── testfwk # 测试编译框架
+└── toolchain # 编译工具链配置，包括编译器路径、编译选项、链接选项等。
+```
+
+### 组件的定义
+**1. 定义的位置**
+`build\lite\components<对应子系统>.json`，我拿applications组件举例
+
+
+**2. 定义的内容**
+组件属性，包括名称、功能简介、是否必选、源码路径、编译目标、RAM、ROM、编译输出、已适配的内核、可配置的特性和依赖等。
+
+**3. 注意事项**
+新增组件时需要在对应子系统json文件中添加相应的组件定义。产品所配置的组件必须在某个子系统中被定义过，否则会校验失败。
 
 我们不需要完全了解整个的编译流程，我们只需要懂得从子系统开始后面怎么走的就可以了。
 

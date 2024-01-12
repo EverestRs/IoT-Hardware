@@ -499,7 +499,7 @@ build / lite
 - 最后我们总结一下，一开始我们是在`config.json`里面子系统的组件到`applications.json`里面的`wifi_iot_sample_app`的app文件夹，再到app文件夹下的Build.gn，再到业务模块里面的Build.gn
 
 ### 附：BUILD.gn分析（未完成待续）
-- 这里以led_example.c程序为例，给大家分析BUILD.gn文件，希望大家能举一反三：
+- 这里以led_example.c程序为例，给大家分析BUILD.gn文件，希望大家能举一反三：  
 在applications\sample\wifi-iot\app目录中有一个BUILD.gn文件，大家可以将该文件理解为一个管理者，它管理app目录中的每个子目录，通过这个BUILD.gn文件中的features字段可以决定哪一个子目录中的BUILD.gn中指定的源文件会被编译到烧录文件中，如下图所示：
   > 前面带`#`的是注释掉的，不会被编译，没有`#`的是要被编译的文件
 

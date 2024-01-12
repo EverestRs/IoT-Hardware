@@ -502,7 +502,7 @@ build / lite
   1. 新建样例目录
   `applications/sample/wifi-iot/app/thread_demo`  
 
-  2. 新建源文件和gn文件
+  2. 新建源文件和gn文件  
     `applications/sample/wifi-iot/app/thread_demo/Thread.c`  
     `applications/sample/wifi-iot/app/thread_demo/BUILD.gn`  
     假设你现在创建好了文件夹和里面的`Thread.c`，`Build.gn`。    

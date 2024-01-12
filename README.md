@@ -18,9 +18,10 @@
     - [组件的定义](#组件的定义)
     - [开发需要掌握的编译文件内容](#开发需要掌握的编译文件内容)
   - [Hi3861的内核开发](#hi3861的内核开发)
-    - [线程的使用](#线程的使用)
-      - [](#)
+    - [线程管理](#线程管理)
+      - [使用流程](#使用流程)
     - [说明](#说明)
+
 
 
 # 硬件学习仓库
@@ -346,7 +347,8 @@ build / lite
 
 ### 组件的定义
 **1. 定义的位置**
-`build\lite\components<对应子系统>.json`，我拿applications组件举例
+`build\lite\components<对应子系统>.json`，我在下面会拿applications组件举例（我在这里放一下图片，图片里对应的就是配置文件）
+    ![Alt text](./图床/11.png)
 
 
 **2. 定义的内容**
@@ -487,11 +489,190 @@ build / lite
 > [BearPi-HM_Nano案例开发](https://gitee.com/bearpi/bearpi-hm_nano/blob/master/applications/BearPi/BearPi-HM_Nano/sample/README.md#/bearpi/bearpi-hm_nano/blob/master/applications/BearPi/BearPi-HM_Nano/sample/A1_kernal_thread/README.md)  
 > [openharmony编写“Hello World”程序](https://docs.openharmony.cn/pages/v4.0/zh-cn/device-dev/quick-start/quickstart-ide-3861-helloworld.md/)  
 
-### 线程的使用
+### 线程管理
 在我们初次接触到openharmony轻量系统开发（hi3861开发）的时候，第一个接触的肯定是如何使用线程来完成我们的任务，那么接下来就让我们开始利用线程来跟他说一声“Hello,openharmony!”
 
-#### 
+#### 使用流程
+  ​ 回忆第一个helloworld.c的例子
 
+  ​ 我们要编写的程序样例就在源码根目录下的：applications/sample/wifi-iot/app/
+
+  ​ 下面将具体演示如何编写程序样例。
+
+  1. 新建样例目录
+  `applications/sample/wifi-iot/app/thread_demo`  
+
+  2. 新建源文件和gn文件
+    `applications/sample/wifi-iot/app/thread_demo/Thread.c`
+    `applications/sample/wifi-iot/app/thread_demo/BUILD.gn`
+    假设你现在创建好了文件夹和里面的`Thread.c`，`Build.gn`。    
+
+3. 介绍线程
+   - 首先我们如何创建线程？
+     - 我们想想我们在创建变量时是怎么做的，是不是先写数据类型后跟名字，像：`int a;`
+     - 那么线程的创建逻辑跟这个差不多，类似：`osThreadAttr_t attr;`
+     - `osThreadAttr_t`是什么？他是一个结构体，定义在`cmsis_os2.h`里面，内容如下：
+        ```c
+        typedef struct {
+          /** Thread name */
+          const char                   *name;
+          /** Thread attribute bits */
+          uint32_t                 attr_bits;
+          /** Memory for the thread control block */
+          void                      *cb_mem;
+          /** Size of the memory for the thread control block */
+          uint32_t                   cb_size;
+          /** Memory for the thread stack */
+          void                   *stack_mem;
+          /** Size of the thread stack */
+          uint32_t                stack_size;
+          /** Thread priority */
+          osPriority_t              priority;
+          /** TrustZone module of the thread */
+          TZ_ModuleId_t            tz_module;
+          /** Reserved */
+          uint32_t                  reserved;
+        } osThreadAttr_t;
+        ```
+        - 这是线程的结构体，它具有以下属性：
+          > `name`：线程的名称。
+            `attr_bits`：线程属性位。
+            `cb_mem`：线程控制块的内存地址。
+            `cb_size`：线程控制块的内存大小。
+            `stack_mem`：线程栈的内存地址。
+            `stack_size`：线程栈的大小。
+            `priority`：线程的优先级。
+            `tz_module`：线程所属的TrustZone模块。
+            `reserved`：保留字段。
+    - 再者如何让线程启动？
+      - **回答：** `osThreadNew((osThreadFunc_t)Thread,NULL,&attr)`
+      - 他的函数原型长下面这样，这是创建线程的接口函数，他有三个参数，一个返回值，**不需要我们掌握，我们会用就行**
+        > `func`：是线程的回调函数，你创建的这个线程会执行这段函数的内容。  
+          `arguments`：线程回调函数的参数。  
+          `attr`：线程的属性，也就是我们之前创建的线程   
+          返回值：线程的id 如果id不为空则说明成功。
+        ```c
+        osThreadId_t osThreadNew(osThreadFunc_t func, void *argument, const osThreadAttr_t *attr)
+        {
+            UINT32 uwTid;
+            UINT32 uwRet;
+            LosTaskCB *pstTaskCB = NULL;
+            TSK_INIT_PARAM_S stTskInitParam;
+
+            if (OS_INT_ACTIVE) {
+                return NULL;
+            }
+
+            if ((attr == NULL) || (func == NULL) || (attr->priority < osPriorityLow1) ||
+                (attr->priority > osPriorityAboveNormal6)) {
+                return (osThreadId_t)NULL;
+            }
+
+            (void)memset_s(&stTskInitParam, sizeof(TSK_INIT_PARAM_S), 0, sizeof(TSK_INIT_PARAM_S));
+            stTskInitParam.pfnTaskEntry = (TSK_ENTRY_FUNC)func;
+        #ifndef LITEOS_WIFI_IOT_VERSION
+            stTskInitParam.uwArg = (UINT32)argument;
+        #else
+            stTskInitParam.auwArgs[0] = (UINT32)argument;
+        #endif
+            stTskInitParam.uwStackSize = attr->stack_size;
+            stTskInitParam.pcName = (CHAR *)attr->name;
+            stTskInitParam.usTaskPrio = OS_TASK_PRIORITY_LOWEST - ((UINT16)(attr->priority) - LOS_PRIORITY_WIN); /* 0~31 */
+
+            uwRet = LOS_TaskCreate(&uwTid, &stTskInitParam);
+
+            if (LOS_OK != uwRet) {
+                return (osThreadId_t)NULL;
+            }
+
+            pstTaskCB = OS_TCB_FROM_TID(uwTid);
+
+            return (osThreadId_t)pstTaskCB;
+        }
+        ``` 
+    - 最后我们如何将线程终止呢？
+      - `osStatus_t osThreadTerminate (osThreadId_t thread_id);`
+      - 显然我们只要传入线程的id就会让该线程终止，返回值是一个状态码
+      - 我这里给出全部的状态码
+        ```c
+        typedef enum {
+          /** Operation completed successfully */
+          osOK                      =  0,
+          /** Unspecified error */
+          osError                   = -1,
+          /** Timeout */
+          osErrorTimeout            = -2,
+          /** Resource error */
+          osErrorResource           = -3,
+          /** Incorrect parameter */
+          osErrorParameter          = -4,
+          /** Insufficient memory */
+          osErrorNoMemory           = -5,
+          /** Service interruption */
+          osErrorISR                = -6,
+          /** Reserved. It is used to prevent the compiler from optimizing enumerations. */
+          osStatusReserved          = 0x7FFFFFFF
+        } osStatus_t;
+        ``` 
+4. 编写源码
+    - `Thread.c`
+        ```c
+        //先导入头文件
+        #include <stdio.h>
+        #include "ohos_init.h"
+        #include "ohos_types.h"
+
+        #define myThread_priority 24  //定义线程优先级
+
+        //创建功能实现的函数
+        void Hello_openharmony(void)
+        {
+          while(1)
+          {
+            printf("Hello openharmony!\n");
+            osDelay(100);
+          }
+        }
+
+        //创建一个静态函数来定义和管理线程
+        static void Task(void)
+        {
+          //创建线程
+          osThreadAttr_t attr;
+
+          attr.name = "myThread";    //建立线程当中的第一个任务
+          attr.attr_bits = 0U;           //线程属性位
+          attr.cb_mem = NULL;       //用户指定的控制块指针
+          attr.cb_size = 0U;        //用户指定的控制块大小，单位：字节
+          attr.stack_mem = NULL;    //用户指定的线程栈指针
+          attr.stack_size = 1024*4;        //线程栈大小，单位：字节
+          attr.priority = myThread_priority;       //线程优先级
+
+          //线程启动任务
+          osThreadId_t ID = osThreadNew((osThreadFunc_t)Hello_openharmony, NULL, &attr);
+          if (ID == NULL) {  
+              printf("Failed to create hello_openharmony Thread!\n");
+          }
+
+          // 休眠5秒
+          osDelay(500);
+          // 终止线程
+          osStatus_t status = osThreadTerminate(ID);
+          printf("[Thread Test] printThread stop, status = %d.\r\n", status);
+        }
+        APP_FEATURE_INIT(Task);
+        ```
+    - `Bulid.gn`
+      ```
+      static_library("my_first_thread"){
+          sources = [
+              "Thread.c"
+          ]
+          include_dirs = [
+              "//utils/native/lite/include"
+          ]
+      }
+      ``` 
 ### 说明
     
 

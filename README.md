@@ -622,7 +622,8 @@ build / lite
         #include "ohos_init.h"
         #include "ohos_types.h"
 
-        #define myThread_priority 24  //定义线程优先级
+        //定义线程优先级
+        #define myThread_priority 24  
 
         //创建功能实现的函数
         void Hello_openharmony(void)
@@ -664,12 +665,12 @@ build / lite
         ```
     - `Bulid.gn`
       ```
-      static_library("my_first_thread"){
+      static_library("my_first_thread"){  # 取名字
           sources = [
-              "Thread.c"
+              "Thread.c"   # 要编译的源文件
           ]
           include_dirs = [
-              "//utils/native/lite/include"
+              "//utils/native/lite/include"  # 头文件的路径
           ]
       }
       ``` 

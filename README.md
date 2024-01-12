@@ -700,7 +700,7 @@ build / lite
         }
         APP_FEATURE_INIT(Task);
         ```
-    - `Bulid.gn`
+    - `BUILD.gn`
       ```
       static_library("my_first_thread"){  # 取名字
           sources = [

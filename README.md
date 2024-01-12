@@ -14,15 +14,15 @@
     - [烧录](#烧录)
     - [串口查看](#串口查看)
   - [Hi3861的简单编译流程说明](#hi3861的简单编译流程说明)
+    - [构建系统](#构建系统)
     - [整体编译流程](#整体编译流程)
     - [组件的定义](#组件的定义)
     - [开发需要掌握的编译文件内容](#开发需要掌握的编译文件内容)
+    - [附：BUILD.gn分析（未完成待续）](#附buildgn分析未完成待续)
   - [Hi3861的内核开发](#hi3861的内核开发)
     - [线程管理](#线程管理)
       - [使用流程](#使用流程)
     - [说明](#说明)
-
-
 
 # 硬件学习仓库
 
@@ -274,6 +274,22 @@ include_dirs中指定source所需要依赖的.h文件路径。
 
 ## Hi3861的简单编译流程说明
 
+### 构建系统
+> （借鉴文章：[从本质上学会基于HarmonyOS开发Hi3861（主要讲授方法）](https://ost.51cto.com/posts/1860)）
+
+在基于OpenHarmony开发Hi3861之前，需要对整个开发环境及过程有一个全局上的了解，首先还是从这一张最经典的框架图给大家：
+  ![Alt text](./图床/框架图.png)
+目前我们对Hi3861的开发主要涉及上图中的内核抽象层、系统能力子系统、DXF子系统、公共基础库子系统（提供KV存储、文件操作、定时器、IoT外设控制等能力供OpenHarmony各业务子系统及上层应用使用）、系统服务框架子系统（用于提供面向服务编程和对外提供能力用于分布式任务调度）
+
+该构建系统由python脚本配合gn、ninja组成，若是为了开发Demo或者应用，不必细究编译构建系统的具体实现细节，只需要做到会使用即可。
+
+当我们输入python build.py wifiiot指令，python脚本开始读取build目录中与wifiiot设备相关的各项参数信息并构造编译指令如下：
+  > gn工具所在目录`/gn`
+  > gen源码所在目录`/out/wifiiot`
+  - `--root=. --dotfile=build/lite/.gn --args='product = "wifiiot" ohos_build_type = "release"'` 这条指令用于生成一些xxx.ninja文件，这些文件将在下一阶段指导ninja编译源码生成烧录文件
+  - ninja工具所在目录`/ninja` 源码所在目录`/out/wifiiot`  `-w dupbuild=warn -C`这条指令用于根据前面生成的xxx.ninja文件调用工具链编译源码最终生成烧录文件
+  - gn用于根据每个目录下的BUID,gn文件搜寻编译生成烧录文件所需的依赖文件，所以我们只要学会如何写BUILD.gn文件即可
+
 ### 整体编译流程
 在上面我们提到了子系统，组件，业务模块等，这些都是我们openharmony框架的概念，这里我们不做过多的赘述。我们主要讲一讲openharmony是怎么知道我们要编译那一个文件夹。
 
@@ -444,7 +460,7 @@ build / lite
       "dirs": [
         "applications/kit_framework"
   ```
-- 然后我们在去看app文件夹下的`Build.gn`文件，这里你可能会对这个文件产生疑惑，我会对其讲解一下，这里我们先专心编译流程。这里我们看到lite_component("app")的app，说明这个gn文件是是配置app文件夹的，下面的startup就是我们需要编译的业务模块。
+- 然后我们在去看app文件夹下的`BUILD.gn`文件，这里你可能会对这个文件产生疑惑，我会对其讲解一下，这里我们先专心编译流程。这里我们看到lite_component("app")的app，说明这个gn文件是是配置app文件夹的，下面的startup就是我们需要编译的业务模块。
   我们在上面的时候创建hello wprld业务的时候在hello world的文件夹里面也创建了一个Build.gn文件，其实我们在app的Build.gn文件中的`features`板块中应该填写`业务文件夹名称 : 业务Build.gn名称`，但是startup的Build.gn名字与文件夹的名字重了，所以可以只用写一个startup
   ```
   # app的Build.gn
@@ -467,7 +483,7 @@ build / lite
   }
   ```
 
-- 因为startup的Build.gn不是很完整，这里我们使用demolink的Build.gn做讲解，`static_library`是静态库的意思，在这里面填的就是业务Build.gn的名字，`sources`板块是我们在这个业务模块里需要编译的源文件，`include_dirs`是我们所有源文件需要的头文件（库文件）的路径
+- 因为startup的Build.gn不是很完整，这里我们使用demolink的BUILD.gn做讲解，`static_library`是静态库的意思，在这里面填的就是业务Build.gn的名字，`sources`板块是我们在这个业务模块里需要编译的源文件，`include_dirs`是我们所有源文件需要的头文件（库文件）的路径
   ```
     static_library("example_demolink") {      # 业务Build.gn的名字是example_demolink
       sources = [
@@ -481,6 +497,27 @@ build / lite
   }
   ```
 - 最后我们总结一下，一开始我们是在`config.json`里面子系统的组件到`applications.json`里面的`wifi_iot_sample_app`的app文件夹，再到app文件夹下的Build.gn，再到业务模块里面的Build.gn
+
+### 附：BUILD.gn分析（未完成待续）
+- 这里以led_example.c程序为例，给大家分析BUILD.gn文件，希望大家能举一反三：
+在applications\sample\wifi-iot\app目录中有一个BUILD.gn文件，大家可以将该文件理解为一个管理者，它管理app目录中的每个子目录，通过这个BUILD.gn文件中的features字段可以决定哪一个子目录中的BUILD.gn中指定的源文件会被编译到烧录文件中，如下图所示：
+  > 前面带`#`的是注释掉的，不会被编译，没有`#`的是要被编译的文件
+
+  ![Alt text](./图床/12.png)
+
+- 假设我们要将app/B1_led目录中的led_example.c文件编译到烧录程序中，需要打开app/B1_led/BUILD.gn文件查看该文件中的源代码被为静态库的名称，可以看到名称为`myled`，如下图所示：
+  ![Alt text](./图床/13.png)
+
+- 这时我们将app/BUILD.gn文件中后面加上`B1_led:myled`就大功告成啦！如下图所示：
+  > 别忘了要把之前的文件前加个`#`
+
+  ![Alt text](./图床/14.png)
+
+- .gn文件的feature字段格式为：模块源文件所在路径:模块名称
+请注意：.gn文件中的空白都是空格，不是Tab键（制表符），如果您输入了制表符，在生成ninja文件时就会产生如下图所示错误：
+  ![Alt text](./图床/15.png)
+
+- 未完成待续......
 
 ## Hi3861的内核开发
 **内核开发文档编写主要借鉴：**
@@ -505,7 +542,7 @@ build / lite
   2. 新建源文件和gn文件  
     `applications/sample/wifi-iot/app/thread_demo/Thread.c`  
     `applications/sample/wifi-iot/app/thread_demo/BUILD.gn`  
-    假设你现在创建好了文件夹和里面的`Thread.c`，`Build.gn`。    
+    假设你现在创建好了文件夹和里面的`Thread.c`，`BUILD.gn`。    
 
 3. 介绍线程
    - 首先我们如何创建线程？

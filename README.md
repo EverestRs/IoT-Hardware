@@ -493,18 +493,18 @@ build / lite
 在我们初次接触到openharmony轻量系统开发（hi3861开发）的时候，第一个接触的肯定是如何使用线程来完成我们的任务，那么接下来就让我们开始利用线程来跟他说一声“Hello,openharmony!”
 
 #### 使用流程
-  ​ 回忆第一个helloworld.c的例子
+  ​ 回忆第一个helloworld.c的例子  
 
-  ​ 我们要编写的程序样例就在源码根目录下的：applications/sample/wifi-iot/app/
+  ​ 我们要编写的程序样例就在源码根目录下的：`applications/sample/wifi-iot/app/`  
 
-  ​ 下面将具体演示如何编写程序样例。
+  ​ 下面将具体演示如何编写程序样例。  
 
   1. 新建样例目录
   `applications/sample/wifi-iot/app/thread_demo`  
 
   2. 新建源文件和gn文件
-    `applications/sample/wifi-iot/app/thread_demo/Thread.c`
-    `applications/sample/wifi-iot/app/thread_demo/BUILD.gn`
+    `applications/sample/wifi-iot/app/thread_demo/Thread.c`  
+    `applications/sample/wifi-iot/app/thread_demo/BUILD.gn`  
     假设你现在创建好了文件夹和里面的`Thread.c`，`Build.gn`。    
 
 3. 介绍线程
@@ -535,15 +535,15 @@ build / lite
         } osThreadAttr_t;
         ```
         - 这是线程的结构体，它具有以下属性：
-          > `name`：线程的名称。
-            `attr_bits`：线程属性位。
-            `cb_mem`：线程控制块的内存地址。
-            `cb_size`：线程控制块的内存大小。
-            `stack_mem`：线程栈的内存地址。
-            `stack_size`：线程栈的大小。
-            `priority`：线程的优先级。
-            `tz_module`：线程所属的TrustZone模块。
-            `reserved`：保留字段。
+          > `name`：线程的名称。  
+            `attr_bits`：线程属性位。  
+            `cb_mem`：线程控制块的内存地址。  
+            `cb_size`：线程控制块的内存大小。  
+            `stack_mem`：线程栈的内存地址。  
+            `stack_size`：线程栈的大小。  
+            `priority`：线程的优先级。  
+            `tz_module`：线程所属的TrustZone模块。  
+            `reserved`：保留字段。  
     - 再者如何让线程启动？
       - **回答：** `osThreadNew((osThreadFunc_t)Thread,NULL,&attr)`
       - 他的函数原型长下面这样，这是创建线程的接口函数，他有三个参数，一个返回值，**不需要我们掌握，我们会用就行**

@@ -20,9 +20,17 @@
     - [开发需要掌握的编译文件内容](#开发需要掌握的编译文件内容)
     - [附：BUILD.gn分析（未完成待续）](#附buildgn分析未完成待续)
   - [Hi3861的内核开发](#hi3861的内核开发)
+    - [什么是内核？](#什么是内核)
+      - [Openharmony内核](#openharmony内核)
+      - [LiteOS-M内核](#liteos-m内核)
+        - [KAL抽象层](#kal抽象层)
     - [线程管理](#线程管理)
-      - [使用流程](#使用流程)
+      - [单线程使用流程](#单线程使用流程)
+      - [多线程使用流程](#多线程使用流程)
+      - [多线程的封装](#多线程的封装)
+    - [软件定时器](#软件定时器)
     - [说明](#说明)
+
 
 # 硬件学习仓库
 
@@ -526,10 +534,100 @@ build / lite
 > [BearPi-HM_Nano案例开发](https://gitee.com/bearpi/bearpi-hm_nano/blob/master/applications/BearPi/BearPi-HM_Nano/sample/README.md#/bearpi/bearpi-hm_nano/blob/master/applications/BearPi/BearPi-HM_Nano/sample/A1_kernal_thread/README.md)  
 > [openharmony编写“Hello World”程序](https://docs.openharmony.cn/pages/v4.0/zh-cn/device-dev/quick-start/quickstart-ide-3861-helloworld.md/)  
 
+### 什么是内核？
+
+ 什么是内核？或者说内核在一个操作系统中起到一个什么样的作用？相信初次接触这个词的伙伴们也会有同样的疑问。不过不用担心，我会尽可能地通俗地介绍内核的相关知识，以便大家能够更好地去体会内核编程。
+
+​ 我们先来看一张图，这是OpenHarmony官网发布的技术架构图
+![Alt text](./图床/16.png)
+
+ 我们可以看到最底层叫做内核层，有Linux，LiteOS等。内核在整个架构，或者操作系统中起到一个核心作用，他负责管理计算机系统内的资源和硬件设备，提供给顶层的应用层一个统一规范的接口，从而使得整个系统能够完成应用与硬件的交互。
+
+​ 具体点来说，内核可以做以下相关的工作：
+  >  1. 进程管理  
+  >  2. 内存管理  
+  >  3. 文件资源管理  
+  >  4. 网络通信管理  
+  >  5. 设备驱动管理  
+
+​当然不局限于这些，这里只是给出具体的例子供大家理解，如果实在难以理解，那么我再举一个例子，进程。可能你没听过进程，但你一定打开过任务管理器。
+  ![Alt text](./图床/17.png)
+
+  这些都是进程，一个进程又由多个线程组成。那么CPU，内存，硬盘，网络这些硬件层面资源是怎么合理分配到我们软件的各个进程中呢？这就是内核帮助我们完成的事情，我们并不关心我们设备上的应用在哪里执行，如何分配资源，内核会完成这些事情。我们日常与软件交互，而内核会帮助我们完成软件和硬件的交互。
+
+#### Openharmony内核
+明白了什么是内核后，我们来看看OpenHarmony的内核是怎么样设计的吧。
+
+​OpenHarmony采用的是多内核设计 有基于Linux内核的标准系统，有基于LiteOS-A的小型系统，也有基于LiteOS-M的轻量系统。他们分别适配不同的设备，比如说智能手表就是轻量级别的，智能汽车就是标准级别的等等。本篇并不介绍标准系统和小型系统，轻量系统更加适合初学者。也就是Hi3861所搭载的系统。
+
+#### LiteOS-M内核
+
+​ 下面是一张LiteOS-M的架构图
+  ![Alt text](./图床/18.png)
+目录结构如下：
+> 注意：这里说的是openharmony完整源码，我们在学习bearpi的时候不需要完整的源码，完整源码下有：linux，liteos_a，liteos_m，uniproton，四个内核
+```
+/kernel/liteos_m
+├── arch                 # 内核指令架构层目录
+│   ├── arm              # arm 架构代码
+│   │   ├── arm9         # arm9 架构代码
+│   │   ├── cortex-m3    # cortex-m3架构代码
+│   │   ├── cortex-m33   # cortex-m33架构代码
+│   │   ├── cortex-m4    # cortex-m4架构代码
+│   │   ├── cortex-m55   # cortex-m55架构代码
+│   │   ├── cortex-m7    # cortex-m7架构代码
+│   │   └── include      # arm架构公共头文件目录
+│   ├── csky             # csky架构代码
+│   │   └── v2           # csky v2架构代码
+│   ├── include          # 架构层对外接口存放目录
+│   ├── risc-v           # risc-v 架构
+│   │   ├── nuclei       # 芯来科技risc-v架构代码
+│   │   └── riscv32      # risc-v官方通用架构代码
+│   └── xtensa           # xtensa 架构代码
+│       └── lx6          # xtensa lx6架构代码
+├── components           # 可选组件
+│   ├── backtrace        # 栈回溯功能
+│   ├── cppsupport       # C++支持
+│   ├── cpup             # CPUP功能
+│   ├── dynlink          # 动态加载与链接
+│   ├── exchook          # 异常钩子
+│   ├── fs               # 文件系统
+│   ├── lmk              # Low memory killer 机制
+│   ├── lms              # Lite memory sanitizer 机制
+│   ├── net              # Network功能
+│   ├── power            # 低功耗管理
+│   ├── shell            # shell功能
+│   └── trace            # trace 工具
+├── drivers              # 驱动框架Kconfig
+├── kal                  # 内核抽象层
+│   ├── cmsis            # cmsis标准接口支持
+│   └── posix            # posix标准接口支持
+├── kernel               # 内核最小功能集支持
+│   ├── include          # 对外接口存放目录
+│   └── src              # 内核最小功能集源码
+├── testsuites           # 内核测试用例
+├── tools                # 内核工具
+├── utils                # 通用公共目录
+```
+具体请参考：[轻量系统内核概述](https://docs.openharmony.cn/pages/v4.0/zh-cn/device-dev/kernel/kernel-mini-overview.md/)
+
+下面重点介绍KAL抽象层 和 基础内核的操作
+
+##### KAL抽象层
+​ 相信大家还是会有疑惑，什么是KAL抽象层？  
+​ Kernel Abstraction Layer
+
+​ 在刚刚的内核中我们提到了，内核主要完成的是软件与硬件的交互，他会给应用层提供统一的规范接口，而KAL抽象层正是内核对应用层提供的接口集合。应用程序可以通过KAL抽象层完成对硬件的控制交互。
+
+​ 抽象层是因为他隐藏了与硬件接口具体的交互逻辑，开发人员只需要关心如何操作硬件，而无需关心硬件底层的细节，大大提高了可移植性和维护性。
+
+​ 以我的角度去看，KAL简单来说就是一堆接口，帮助你去操控硬件。CMSIS与POSIX就是具有统一规范的一些接口。通过他们我们就可以去控制一些基础的内核，线程，软件定时器，互斥锁，信号量等等。概念就先简单介绍这么多，感兴趣的伙伴们可以上官网查看更多的关于OpenHarmony内核的信息。下面我会带着大家编码操作，从实际去体会内核编程。
+
+
 ### 线程管理
 在我们初次接触到openharmony轻量系统开发（hi3861开发）的时候，第一个接触的肯定是如何使用线程来完成我们的任务，那么接下来就让我们开始利用线程来跟他说一声“Hello,openharmony!”
 
-#### 使用流程
+#### 单线程使用流程
   ​ 回忆第一个helloworld.c的例子  
 
   ​ 我们要编写的程序样例就在源码根目录下的：`applications/sample/wifi-iot/app/`  
@@ -711,6 +809,84 @@ build / lite
           ]
       }
       ``` 
+
+#### 多线程使用流程
+
+其实他跟单线程是一样的，只不过我们可以省略一部分线程结构体的定义，类似于：
+  ```c
+  osThreadAttr_t attr;
+  attr.attr_bits=0U;
+  attr.cb_mem=NULL;
+  attr.cb_size=0U;
+  attr.stack_mem=NULL;
+  attr.stack_size=1024*4;
+  attr.priority=25;
+
+  attr.name=Thread_1;
+  if (osThreadNew((osThreadFunc_t)Thread_1,NULL,&attr)==NULL){
+      printf("Failed to create Theard_1!\r\n");
+  }
+
+  attr.name=Thread_2;
+  if (osThreadNew((osThreadFunc_t)Thread_2,NULL,&attr)==NULL){
+      printf("Failed to create Thread_2!\r\n");
+  }
+
+  attr.name=Thread_3;
+  if (osThreadNew((osThreadFunc_t)Thread_3,NULL,&attr)==NULL){
+      printf("Failed to create Thread_3!\r\n");
+  }
+  ```
+  这里我只是把名字重新定义了一下，但是我创建了3个线程，如果我想改变第2个的线程的优先级，第3个线程的栈大小（一般不做更改），怎么改？我在下面给个修改示例：
+  ```c
+  osThreadAttr_t attr;
+  attr.attr_bits=0U;
+  attr.cb_mem=NULL;
+  attr.cb_size=0U;
+  attr.stack_mem=NULL;
+  attr.stack_size=1024*4;
+  attr.priority=25;
+
+  attr.name=Thread_1;
+  if (osThreadNew((osThreadFunc_t)Thread_1,NULL,&attr)==NULL){
+      printf("Failed to create Theard_1!\r\n");
+  }
+
+  attr.name=Thread_2;
+  attr.priority = 24;   //更改优先级为24
+  if (osThreadNew((osThreadFunc_t)Thread_2,NULL,&attr)==NULL){
+      printf("Failed to create Thread_2!\r\n");
+  }
+
+  attr.name=Thread_3;
+  attr.stack_size=216*4;  //更改栈大小，但是一般不做更改
+  if (osThreadNew((osThreadFunc_t)Thread_3,NULL,&attr)==NULL){
+      printf("Failed to create Thread_3!\r\n");
+  }
+  ```
+
+#### 多线程的封装
+在处理业务的时候，我们一般是多线程的背景，下面我将创建线程函数封装起来，方便大家创建多线程
+```c
+osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
+    // 定义线程和属性
+    osThreadAttr_t attr = {
+        name, 0, NULL, 0, NULL, 1024, osPriorityNormal, 0, 0
+    };
+    // 创建线程
+    osThreadId_t tid = osThreadNew(func, arg, &attr);
+    if(tid == NULL){
+        printf("[newThread] osThreadNew(%s) failed.\r\n", name);
+    }
+    return tid;
+}
+```
+线程部分先体会到这里，想要探索更过线程相关的API，这里提供了API网站，供大家参考学习。
+1. [CMSIS_OS2 Thread API](https://arm-software.github.io/CMSIS_5/RTOS2/html/os2MigrationFunctions.html#mig_threadMgmt)  
+2. [Openharmony官方CMSIS_API文档](https://docs.openharmony.cn/pages/v4.0/zh-cn/device-dev/reference/kernel/cmsis/_c_m_s_i_s-_r_t_o_s.md/)  
+
+### 软件定时器
+
 ### 说明
     
 

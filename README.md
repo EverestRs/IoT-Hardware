@@ -29,6 +29,7 @@
       - [多线程使用流程](#多线程使用流程)
       - [多线程的封装](#多线程的封装)
     - [软件定时器](#软件定时器)
+      - [软件定时器使用流程](#软件定时器使用流程)
     - [说明](#说明)
 
 
@@ -627,6 +628,10 @@ build / lite
 ### 线程管理
 在我们初次接触到openharmony轻量系统开发（hi3861开发）的时候，第一个接触的肯定是如何使用线程来完成我们的任务，那么接下来就让我们开始利用线程来跟他说一声“Hello,openharmony!”
 
+​ 在管理线程前，我们需要了解线程，线程是调度的基本单位，具有独立的栈空间和寄存器上下文，相比与进程，他是轻量的。举一个实际的例子，动物园卖票。
+
+​ 对于动物园卖票这件事本身而言是一个进程，而每一个买票的人可以看作一个线程，在多个售票口处，我们并发执行，并行计算，共同消费动物园的门票，像享受共同的内存资源空间一样。为什么要线程管理呢？你我都希望买到票，但是票有限，我们都不希望看到售票厅一篇混乱，因此对线程进行管理是非常重要的一件事情。
+
 #### 单线程使用流程
   ​ 回忆第一个helloworld.c的例子  
 
@@ -886,6 +891,156 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
 2. [Openharmony官方CMSIS_API文档](https://docs.openharmony.cn/pages/v4.0/zh-cn/device-dev/reference/kernel/cmsis/_c_m_s_i_s-_r_t_o_s.md/)  
 
 ### 软件定时器
+
+​ 下面我们介绍软件定时器，老样子我们先来介绍以下软件定时器。软件定时器是一种在软件层面上实现的计时器机制，用于在特定的时间间隔内执行特定的任务或触发特定的事件。它不依赖于硬件定时器，而是通过软件编程的方式实现。举一个例子，手机应用。
+
+​ 当你使用手机上的某个应用时，你可能会注意到，如果你在一段时间内没有进行任何操作，应用程序会自动断开连接并要求你重新登录。这是为了保护你的账号安全并释放服务器资源。类似的设定都是有软件定时器实现的，下面进行实际操作，让大家体会一下软件定时器。
+
+#### 软件定时器使用流程
+1. 新建样例目录  
+    `applications/sample/wifi-iot/app/time_demo`  
+
+2. 新建源文件和gn文件
+    `applications/sample/wifi-iot/app/time_demo/time.c`   
+    `applications/sample/wifi-iot/app/time_demo/BUILD.gn`
+3. 编写源码
+    - 如何创建软件定时器？
+        ```c
+        osTimerId_t osTimerNew (osTimerFunc_t func, osTimerType_t type, void *argument, const osTimerAttr_t *attr);
+        ``` 
+        >  `func`: 软件定时器的回调函数  
+            `type`：软件定时器的种类  
+            `argument`：软件定时器回调函数的参数
+            `attr`：软件定时器的属性  
+            返回值：返回软件定时器的id， id为空则说明软件定时器失败  
+
+        软件定时器的种类有两个，分为一次性定时器和周期性定时器，一次性在执行完回调函数后就会停止计数，而周期性定时器会重复触发，每次触发重新计时。根据不同的需求我们可以选择使用不同的软件定时器。（下面是定时器的类型）
+        ```c
+        typedef enum {
+          /** One-shot timer */
+          osTimerOnce               = 0,  //一次性定时器
+          /** Repeating timer */
+          osTimerPeriodic           = 1   //周期性定时器
+        } osTimerType_t;
+        ```
+    - 如何启动软件定时器？
+      ```c
+      osStatus_t osTimerStart (osTimerId_t timer_id, uint32_t ticks);
+      ``` 
+      > `timer_id`：软件定时器的参数，指定要启动哪个软件定时器  
+        `ticks`：等待多少个ticks执行回调函数，在Hi3861中 100个ticks为1秒  
+        返回值：软件定时器的状态码，在线程部分已经展示给大家了全部的状态码  
+
+    - 如何停止定时器?
+      ```c
+      osStatus_t osTimerStop (osTimerId_t timer_id);
+      ``` 
+      > 这个函数很简单，只需要传软件定时器的id，即可停止软件计时器，并且返回他的状态码
+    - 如何删除定时器？
+      ```
+      osStatus_t osTimerDelete (osTimerId_t timer_id);
+      ``` 
+    - `time.c`
+      ```c
+      //导入头文件
+      #include <stdio.h>
+      #include <string.h>
+      #include <unistd.h>
+
+      #include "cmsis_os2.h"
+      #include "ohos_init.h"
+
+      //定义定时器触发的任务函数
+      void Time1back(void)
+      {
+          printf("This is BearPi Timer1Callback!\n");
+      }
+      void Time2back (void)
+      {
+          printf("This is BearPi Timer2Callback!\n");
+      }
+
+      //在这里面开展定时器的流程
+      static void time_example_2(void)
+      {
+          osTimerId_t ID1,ID2;   //定义定时器的ID，类似于osThreadAttr_t attr;
+          uint32_t timerDelay;   //uint32_t == (unsigned int) 32B==4字节
+          osStatus_t status;     //定义状态量
+
+          ID1=osTimerNew(Time1back, osTimerOnce, NULL, NULL);  //(任务函数名，定时器类型，仅限于osTimerOnce(单次定时器)或osTimerPeriodic，定时器回调函数参数，定时器属性，当前不支持该参数，参数可为NULL )
+          if (ID1 != NULL)
+          {
+              timerDelay=100U; //（100U == 1S）
+
+              status= osTimerStart(ID1,timerDelay);  
+              // 定时器开始运行函数 osOK，表示执行成功。
+              //  osErrorParameter，表示参数错误。
+              //  osErrorResource，表示其他错误。
+              //  osErrorISR，表示在中断中调用本函数。
+              //osTimerStop,osTimerDelete也是一样。
+              if (status != osOK) {
+                  printf("Failed to start Timer1!\r\n");
+              }
+          }
+          osDelay(100U);   //延迟1秒
+
+          //STOP（暂停定时器）
+          status = osTimerStop(ID1);  //暂停定时器并将返回值存入状态量
+          if (status == osOK){
+              printf("the time1 is stop success\r\n");
+          }
+          else{
+              printf("the time1 is stop failed\r\n");
+          }
+
+          //Delete（删除定时器）
+          status = osTimerDelete(ID1);   //删除定时器并将返回值存入状态量
+          if (status == osOK){
+              printf("the time1 is delect success\r\n");
+          }
+          else{
+              printf("the time1 is delect failed\r\n");
+          }
+          
+          ID2=osTimerNew(Time2back, osTimerPeriodic, NULL, NULL);
+          if (ID2 != NULL)
+          {
+              timerDelay=300U;
+
+              status= osTimerStart(ID2,timerDelay);
+              if (status != osOK) {
+                  printf("Failed to start Timer2!\r\n");
+              }
+          }
+          osDelay(600U);
+          status = osTimerStop(ID2);
+          if (status == osOK){
+              printf("the time2 is stop success!\r\n");
+          }
+          else{
+              printf("the time2 is stop failed\r\n");
+          }
+          status = osTimerDelete(ID2);
+          if (status == osOK){
+              printf("the time2 is delect success\r\n");
+          }
+          else{
+              printf("the time2 is delect failed\r\n");
+          }
+      }
+      APP_FEATURE_INIT(time_example_2);
+      ``` 
+    - `BUILD.gn`
+      ```
+      static_library("mytime") {
+          sources = [
+              "time.c"
+          ]
+          include_dirs = [
+              "//utils/native/lite/include"
+          ]
+      }
+      ``` 
 
 ### 说明
     

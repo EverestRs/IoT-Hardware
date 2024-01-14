@@ -35,6 +35,11 @@
     - [互斥锁](#互斥锁)
       - [互斥锁介绍](#互斥锁介绍)
       - [互斥锁的使用流程](#互斥锁的使用流程)
+      - [互斥锁案例体验](#互斥锁案例体验)
+    - [信号量](#信号量)
+      - [信号量介绍](#信号量介绍)
+      - [信号量的使用流程](#信号量的使用流程)
+      - [](#)
     - [说明](#说明)
 
 
@@ -1147,6 +1152,12 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
 4. 编写源码
     - `mutex.c`
       ```c
+      /*  实现效果
+      整体实现的效果是高优先级任务与低优先级任务抢占互斥锁资源，首先因为高优先级和中优先级都延迟
+      了1秒，所以低优先级任务第一个执行，在低优先级执行了1秒，中优先级执行（1秒打印一次），高优
+      先级因为低优先级占据互斥锁资源而无法启动，在低优先级再执行2秒（共3秒）后释放互斥锁资源，
+      高优先级得到资源开始执行，期间中优先级一直执行打印，高优先级与低优先级3秒交替打印
+      */
       #include<stdio.h>
       #include <string.h>
       #include <unistd.h>
@@ -1161,10 +1172,10 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
       {
           osDelay(100U);
           while(1){
-              osMutexAcquire(muxe_id,osWaitForever);
+              osMutexAcquire(muxe_id,osWaitForever);  //获取互斥锁资源
               printf("HIGH_Thread is running!\r\n");
               osDelay(300U);
-              osMutexRelease(muxe_id);
+              osMutexRelease(muxe_id);   //释放互斥锁资源
           }
       }
 
@@ -1182,15 +1193,17 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
       void LOW_Thread(void)
       {
           while(1){
-              osMutexAcquire(muxe_id,osWaitForever);
+              osMutexAcquire(muxe_id,osWaitForever);  //获取互斥锁资源
               printf("LOW_Thread is running!\r\n");
               osDelay(300U);
-              osMutexRelease(muxe_id);
+              osMutexRelease(muxe_id);   //释放互斥锁资源
           }
       }
+
       static void muxe_example(void)
       {
-          muxe_id=osMutexNew(NULL);
+          // 创建互斥锁，互斥锁的attr结构体可以为NULL（无）
+          muxe_id=osMutexNew(NULL);  //获取互斥锁的ID
           if (muxe_id == NULL){
               printf("Failed to create Muxe!\r\n");
           }
@@ -1208,21 +1221,167 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
               printf("Failed to create Thread_1!\r\n");
           }
 
-          attr.name = "Thread_2";
+          attr.name = "Thread_2";  //中优先级
           attr.priority = 25;
           if (osThreadNew((osThreadFunc_t)MID_Thread,NULL,&attr) == NULL){
               printf("Failed to create Thread_2!\r\n");
           }
 
           attr.name = "Thread_3";
-          attr.priority = 26;
+          attr.priority = 26;  //低优先级
           if (osThreadNew((osThreadFunc_t)LOW_Thread,NULL,&attr) == NULL){
               printf("Failed to create Thread_3!\r\n");
           }
-
       }
       APP_FEATURE_INIT(muxe_example);
       ``` 
+    - `BUILD.gn`
+      ```
+      static_library("mymuxe") {
+          sources = [
+              "muxe_example.c"
+          ]
+          include_dirs = [
+              "//utils/native/lite/include"
+          ]
+      }
+      ``` 
+    - 执行效果
+      > 代码编译烧录代码后，按下开发板的RESET按键，通过串口助手查看日志，中优先级任务一直正常运行，而高优先级和低优先级的任务因为互相抢占互斥锁，交替运行。 
+      ```
+      LowPrioThread is runing.
+      MidPrioThread is runing.
+      MidPrioThread is runing.
+      MidPrioThread is runing.
+      HighPrioThread is runing.
+      MidPrioThread is runing.
+      MidPrioThread is runing.
+      MidPrioThread is runing.
+      LowPrioThread is runing.
+      MidPrioThread is runing.
+      MidPrioThread is runing.
+      MidPrioThread is runing.
+      HighPrioThread is runing.
+      MidPrioThread is runing.
+      MidPrioThread is runing.
+      MidPrioThread is runing
+      ``` 
+#### 互斥锁案例体验
+我这里粘贴一个佬写的代码，大家可以学习借鉴一下！
+- `mutex_zoor.c`
+  ```c
+  #include <stdio.h>
+  #include <unistd.h>
+  #include "ohos_init.h"
+  #include "cmsis_os2.h"
+
+  // 模拟动物园门票数
+  static int count = 100;
+
+  // 售票业务线程
+  void outThread(void *args){
+      // 获取互斥锁
+      osMutexId_t *mid = (osMutexId_t *)args;
+      // 每个线程都在不停地买票
+      while(1){
+          // 获取锁，进入业务流程
+          if(osMutexAcquire(*mid, 100) == osOK){
+              if(count > 0){
+                  count--;
+                  // 设置提示信息
+                  printf("[Mutex Test] Thread %s get a value, the less is %d.\r\n", osThreadGetName(osThreadGetId()), count);
+              } else {
+                  // 告知这些线程已经没有门票卖了，线程结束
+                  printf("[Mutex Test] The value is out!\r\n");
+                  osThreadTerminate(osThreadGetId());
+              }
+          }
+          // 释放锁
+          osMutexRelease(*mid);
+
+          osDelay(5);
+      }
+  }
+  // 创建线程封装
+  osThreadId_t createThreads(char *name, osThreadFunc_t func, void *args){
+      osThreadAttr_t attr = {
+          name, 0, NULL, 0, NULL, 1024, osPriorityNormal, 0, 0
+      };
+      osThreadId_t tid = osThreadNew(func, args, &attr);
+      return tid;
+  }
+
+  // 主函数实现多线程的创建，执行买票业务
+  void mutexMain(void){
+      // 创建互斥锁
+      osMutexAttr_t attr = {0};
+
+      // 获取互斥锁的id
+      osMutexId_t mid = osMutexNew(&attr);
+
+      if(mid == NULL){
+          printf("[Mutex Test] Failed to create a mutex!\r\n");
+      }
+
+      // 创建多线程
+      osThreadId_t tid1 = createThreads("Thread_1", (osThreadFunc_t)outThread, &mid);
+      osThreadId_t tid2 = createThreads("Thread_2", (osThreadFunc_t)outThread, &mid);
+      osThreadId_t tid3 = createThreads("Thread_3", (osThreadFunc_t)outThread, &mid);
+
+      osDelay(1000);
+
+  }
+
+  // 测试线程
+  void MainTest(void){
+      osThreadId_t tid = createThreads("MainTest", (osThreadFunc_t)mutexMain, NULL);
+  }
+
+  APP_FEATURE_INIT(MainTest);
+  ``` 
+  - 结果展示
+    ![Alt text](./图床/21.png) 
+
+- 可能有的伙伴们看到这里不太清晰，会觉得这段代码真的上锁了吗(下面这一段代码)
+  ```c
+   if(osMutexAcquire(*mid, 100) == osOK){
+            if(count > 0){
+                count--;
+                printf("[Mutex Test] Thread %s get a value, the less is %d.\r\n", osThreadGetName(osThreadGetId()), count);
+            } else {
+                printf("[Mutex Test] The value is out!\r\n");
+                osThreadTerminate(osThreadGetId());
+            }
+        }
+  ``` 
+- 那么我们可以不使用互斥锁再次执行这段代码
+  ```c
+  while(1){
+        // 获取锁，进入业务流程
+        // if(osMutexAcquire(*mid, 100) == osOK){
+            if(count > 0){
+                count--;
+                printf("[Mutex Test] Thread %s get a value, the less is %d.\r\n", osThreadGetName(osThreadGetId()), count);
+            } else {
+                printf("[Mutex Test] The value is out!\r\n");
+                osThreadTerminate(osThreadGetId());
+            }
+        //}
+        // 释放锁
+        //osMutexRelease(*mid);
+        //osDelay(5);
+    }
+  ``` 
+  - 结果展示
+    ![Alt text](./图床/22.png) 
+
+### 信号量
+
+#### 信号量介绍
+
+#### 信号量的使用流程
+
+#### 
 
 ### 说明
     

@@ -19,17 +19,22 @@
     - [组件的定义](#组件的定义)
     - [开发需要掌握的编译文件内容](#开发需要掌握的编译文件内容)
     - [附：BUILD.gn分析（未完成待续）](#附buildgn分析未完成待续)
-  - [Hi3861的内核开发](#hi3861的内核开发)
+  - [Hi3861的基础内核开发](#hi3861的基础内核开发)
     - [什么是内核？](#什么是内核)
       - [Openharmony内核](#openharmony内核)
       - [LiteOS-M内核](#liteos-m内核)
         - [KAL抽象层](#kal抽象层)
     - [线程管理](#线程管理)
+      - [线程状态的介绍](#线程状态的介绍)
       - [单线程使用流程](#单线程使用流程)
       - [多线程使用流程](#多线程使用流程)
       - [多线程的封装](#多线程的封装)
     - [软件定时器](#软件定时器)
+      - [软件定时器的介绍](#软件定时器的介绍)
       - [软件定时器使用流程](#软件定时器使用流程)
+    - [互斥锁](#互斥锁)
+      - [互斥锁介绍](#互斥锁介绍)
+      - [互斥锁的使用流程](#互斥锁的使用流程)
     - [说明](#说明)
 
 
@@ -528,7 +533,7 @@ build / lite
 
 - 未完成待续......
 
-## Hi3861的内核开发
+## Hi3861的基础内核开发
 **内核开发文档编写主要借鉴：**
 > [OpenHarmony智能开发套件[内核编程·上]](https://ost.51cto.com/posts/23938)  
 > [OpenHarmony智能开发套件[内核编程·下]](https://ost.51cto.com/posts/23997)  
@@ -631,6 +636,17 @@ build / lite
 ​ 在管理线程前，我们需要了解线程，线程是调度的基本单位，具有独立的栈空间和寄存器上下文，相比与进程，他是轻量的。举一个实际的例子，动物园卖票。
 
 ​ 对于动物园卖票这件事本身而言是一个进程，而每一个买票的人可以看作一个线程，在多个售票口处，我们并发执行，并行计算，共同消费动物园的门票，像享受共同的内存资源空间一样。为什么要线程管理呢？你我都希望买到票，但是票有限，我们都不希望看到售票厅一篇混乱，因此对线程进行管理是非常重要的一件事情。
+
+#### 线程状态的介绍
+首先介绍一下线程的几个状态，他们分别有：
+- 创建
+- 就绪（Ready）：该任务在就绪队列中，只等待CPU。  
+- 运行（Running）：该任务正在执行。  
+- 阻塞（Blocked）：该任务不在就绪队列中。包含任务被挂起（suspend状态）、任务被延时（delay状态）、任务正在等待信号量、读写队列或者等待事件等。  
+- 终止（Dead）：该任务运行结束，等待系统回收资源。  
+- 任务状态迁移示意图
+  ![Alt text](./图床/19.png)
+  这里我不展开任务状态迁移说明，因为这个不重要，如果你有兴趣了解，可以移步：[轻量系统任务管理](https://docs.openharmony.cn/pages/v4.0/zh-cn/device-dev/kernel/kernel-mini-basic-task.md/)
 
 #### 单线程使用流程
   ​ 回忆第一个helloworld.c的例子  
@@ -892,6 +908,7 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
 
 ### 软件定时器
 
+#### 软件定时器的介绍
 ​ 下面我们介绍软件定时器，老样子我们先来介绍以下软件定时器。软件定时器是一种在软件层面上实现的计时器机制，用于在特定的时间间隔内执行特定的任务或触发特定的事件。它不依赖于硬件定时器，而是通过软件编程的方式实现。举一个例子，手机应用。
 
 ​ 当你使用手机上的某个应用时，你可能会注意到，如果你在一段时间内没有进行任何操作，应用程序会自动断开连接并要求你重新登录。这是为了保护你的账号安全并释放服务器资源。类似的设定都是有软件定时器实现的，下面进行实际操作，让大家体会一下软件定时器。
@@ -1043,6 +1060,169 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
             ]
         }
         ``` 
+软件定时器的API相对较少，这里还是提供所有的软件定时器API
+1. [CMSIS_OS2 Timer API](https://arm-software.github.io/CMSIS_5/RTOS2/html/os2MigrationFunctions.html#mig_timer)
+
+### 互斥锁
+在学习互斥锁之前，我们有必要去再看一下线程的状态这一小节，也就是我们要了解线程的生命周期，防止我们对线程的生命周期不了解而对互斥锁的学习感到困难。
+
+#### 互斥锁介绍
+互斥锁的应用场景时处理多线程，资源访问的问题。这里还是给大家举一个例子：动物园卖票。
+
+​ 在我们的程序设计中，往往会有共有资源，每个线程都可以进来访问这些资源。这里的共有资源就是我们的门票，一个售票口就是一个线程，当有人来窗口买票，我们的门票就会减少一张。当然一个动物园的流量时巨大的，我们不能只设立一个售票口，这样的效率是很低的。京东淘宝抢购秒杀也一样，我们必须设立多个窗口，在同一时刻为多个人处理业务。多线程解决了效率问题但也带来了安全隐患。
+
+​ 我们假设一个这样的场景，动物园仅剩一张门票，但是有两个在不同的窗口同时付了钱，当售票员为他们拿票的时候就会发现，少了一张票，两个人都付了钱都想要那张票，就陷入了一个死局，无奈动物园只能让他们都进去。但是在程序中体现的可能就是一个bug，动物园的门票剩余数为：-1。
+
+​ 售票的逻辑很简单，只要票数大于零，还有票能卖，那就在此基础上减掉一。问题就在于，**两个线程同时在count = 1的时候通过了if判断，都执行的count–；那么就会出现了count = -1，也就是票数为负 的bug结果。**
+
+​ 互斥锁的出现就很好地解决了一个问题，他能够阻止上面两个线程同时访问资源的同步行为，也就是说当一个线程进入这个if语句后，别的线程都不能进入。形象起来说，就像对这段代码加了锁，只有有钥匙的线程才能够访问它。
+![Alt text](./图床/20.png)
+
+#### 互斥锁的使用流程
+1. 新建样例目录  
+`applications/sample/wifi-iot/app/mutex_demo`  
+
+2. 新建源文件和gn文件  
+`applications/sample/wifi-iot/app/mutex_demo/mutex.c`  
+`applications/sample/wifi-iot/app/mutex_demo/BUILD.gn`  
+
+3. 介绍互斥锁
+   - 如何创建互斥锁？
+      >  与线程的定义一样，互斥锁也封装成了一个结构体
+
+      ```c
+      typedef struct {
+        /** Mutex name */
+        const char                   *name;
+        /** Reserved attribute bits */
+        uint32_t                 attr_bits;
+        /** Memory for the mutex control block */
+        void                      *cb_mem;
+        /** Size of the memory for the mutex control block */
+        uint32_t                   cb_size;
+      } osMutexAttr_t;
+      ```
+      > `name`：互斥锁的名称  
+        `attr_bits`：保留的属性位  
+        `cb_mem`：互斥锁控制块的内存  
+        `cb_size`：互斥锁控制块内存的大小 
+
+    - 如何获取互斥锁的ID？
+       ```c
+       osMutexId_t osMutexNew(const osMutexAttr_t *attr);
+       ```
+    - 线程如何获取互斥锁？
+       ```c
+       osStatus_t osMutexAcquire(osMutexId_t mutex_id, uint32_t timeout);
+       ```
+       ​ 传入互斥锁id，设置我们的延迟时间，当线程获取到我们的互斥锁时，返回的状态是osOK。
+        下面是全部的状态码（我这里在介绍一次，以免遗忘）
+        ```
+        typedef enum {
+        /** Operation completed successfully */
+        osOK                      =  0,
+        /** Unspecified error */
+        osError                   = -1,
+        /** Timeout */
+        osErrorTimeout            = -2,
+        /** Resource error */
+        osErrorResource           = -3,
+        /** Incorrect parameter */
+        osErrorParameter          = -4,
+        /** Insufficient memory */
+        osErrorNoMemory           = -5,
+        /** Service interruption */
+        osErrorISR                = -6,
+        /** Reserved. It is used to prevent the compiler from optimizing enumerations. */
+        osStatusReserved          = 0x7FFFFFFF
+      } osStatus_t;
+        ```
+    - 如何释放互斥锁？
+      ```c
+      osStatus_t osMutexRelease(osMutexId_t mutex_id);
+      ``` 
+      ​ 当我们的线程执行完业务后需要把锁释放出来，让别的线程获取锁，执行业务。当然这个过程是线程之间的竞争，一个线程可能一直得不到锁，一个线程也可能刚释放锁又获得锁，我们可以添加休眠操作，提高锁在各个线程间的分配。
+      其他API请参考：[Mutex API](https://arm-software.github.io/CMSIS_5/RTOS2/html/os2MigrationFunctions.html#mig_mutex)
+
+4. 编写源码
+    - `mutex.c`
+      ```c
+      #include<stdio.h>
+      #include <string.h>
+      #include <unistd.h>
+
+      #include "cmsis_os2.h"
+      #include "ohos_init.h"
+
+      osMutexId_t muxe_id;     //创建互斥锁ID
+
+      //创建高优先级线程的回调函数
+      void HIGH_Thread(void)
+      {
+          osDelay(100U);
+          while(1){
+              osMutexAcquire(muxe_id,osWaitForever);
+              printf("HIGH_Thread is running!\r\n");
+              osDelay(300U);
+              osMutexRelease(muxe_id);
+          }
+      }
+
+      //创建中优先级线程的回调函数
+      void MID_Thread(vboid)
+      {
+          osDelay(100U);
+          while(1){
+              printf("MID_Thread is running!\r\n");
+              osDelay(100U);
+          }
+      }
+
+      //创建低优先级线程的回调函数
+      void LOW_Thread(void)
+      {
+          while(1){
+              osMutexAcquire(muxe_id,osWaitForever);
+              printf("LOW_Thread is running!\r\n");
+              osDelay(300U);
+              osMutexRelease(muxe_id);
+          }
+      }
+      static void muxe_example(void)
+      {
+          muxe_id=osMutexNew(NULL);
+          if (muxe_id == NULL){
+              printf("Failed to create Muxe!\r\n");
+          }
+
+          osThreadAttr_t attr;
+          attr.attr_bits=0U;
+          attr.cb_mem=NULL;
+          attr.cb_size=0U;
+          attr.stack_mem=NULL;
+          attr.stack_size=1024*4;
+
+          attr.name = "Thread_1";
+          attr.priority = 24;     //高优先级
+          if (osThreadNew((osThreadFunc_t)HIGH_Thread,NULL,&attr) == NULL){
+              printf("Failed to create Thread_1!\r\n");
+          }
+
+          attr.name = "Thread_2";
+          attr.priority = 25;
+          if (osThreadNew((osThreadFunc_t)MID_Thread,NULL,&attr) == NULL){
+              printf("Failed to create Thread_2!\r\n");
+          }
+
+          attr.name = "Thread_3";
+          attr.priority = 26;
+          if (osThreadNew((osThreadFunc_t)LOW_Thread,NULL,&attr) == NULL){
+              printf("Failed to create Thread_3!\r\n");
+          }
+
+      }
+      APP_FEATURE_INIT(muxe_example);
+      ``` 
 
 ### 说明
     

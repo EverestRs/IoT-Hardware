@@ -649,8 +649,8 @@ build / lite
 - 运行（Running）：该任务正在执行。  
 - 阻塞（Blocked）：该任务不在就绪队列中。包含任务被挂起（suspend状态）、任务被延时（delay状态）、任务正在等待信号量、读写队列或者等待事件等。  
 - 终止（Dead）：该任务运行结束，等待系统回收资源。  
-- 任务状态迁移示意图
-  ![Alt text](./图床/19.png)
+- 任务状态迁移示意图  
+  ![Alt text](./图床/19.png)  
   这里我不展开任务状态迁移说明，因为这个不重要，如果你有兴趣了解，可以移步：[轻量系统任务管理](https://docs.openharmony.cn/pages/v4.0/zh-cn/device-dev/kernel/kernel-mini-basic-task.md/)
 
 #### 单线程使用流程

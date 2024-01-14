@@ -897,13 +897,14 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
 ​ 当你使用手机上的某个应用时，你可能会注意到，如果你在一段时间内没有进行任何操作，应用程序会自动断开连接并要求你重新登录。这是为了保护你的账号安全并释放服务器资源。类似的设定都是有软件定时器实现的，下面进行实际操作，让大家体会一下软件定时器。
 
 #### 软件定时器使用流程
-1. 新建样例目录  
+1. 新建样例目录
     `applications/sample/wifi-iot/app/time_demo`  
 
 2. 新建源文件和gn文件
     `applications/sample/wifi-iot/app/time_demo/time.c`   
     `applications/sample/wifi-iot/app/time_demo/BUILD.gn`
-3. 编写源码
+
+3. 介绍定时器
     - 如何创建软件定时器？
         ```c
         osTimerId_t osTimerNew (osTimerFunc_t func, osTimerType_t type, void *argument, const osTimerAttr_t *attr);
@@ -940,107 +941,108 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
       ```
       osStatus_t osTimerDelete (osTimerId_t timer_id);
       ``` 
-    - `time.c`
-      ```c
-      //导入头文件
-      #include <stdio.h>
-      #include <string.h>
-      #include <unistd.h>
+    - 编写源码
+      - `time.c`
+        ```c
+        //导入头文件
+        #include <stdio.h>
+        #include <string.h>
+        #include <unistd.h>
 
-      #include "cmsis_os2.h"
-      #include "ohos_init.h"
+        #include "cmsis_os2.h"
+        #include "ohos_init.h"
 
-      //定义定时器触发的任务函数
-      void Time1back(void)
-      {
-          printf("This is BearPi Timer1Callback!\n");
-      }
-      void Time2back (void)
-      {
-          printf("This is BearPi Timer2Callback!\n");
-      }
+        //定义定时器触发的任务函数
+        void Time1back(void)
+        {
+            printf("This is BearPi Timer1Callback!\n");
+        }
+        void Time2back (void)
+        {
+            printf("This is BearPi Timer2Callback!\n");
+        }
 
-      //在这里面开展定时器的流程
-      static void time_example_2(void)
-      {
-          osTimerId_t ID1,ID2;   //定义定时器的ID，类似于osThreadAttr_t attr;
-          uint32_t timerDelay;   //uint32_t == (unsigned int) 32B==4字节
-          osStatus_t status;     //定义状态量
+        //在这里面开展定时器的流程
+        static void time_example_2(void)
+        {
+            osTimerId_t ID1,ID2;   //定义定时器的ID，类似于osThreadAttr_t attr;
+            uint32_t timerDelay;   //uint32_t == (unsigned int) 32B==4字节
+            osStatus_t status;     //定义状态量
 
-          ID1=osTimerNew(Time1back, osTimerOnce, NULL, NULL);  //(任务函数名，定时器类型，仅限于osTimerOnce(单次定时器)或osTimerPeriodic，定时器回调函数参数，定时器属性，当前不支持该参数，参数可为NULL )
-          if (ID1 != NULL)
-          {
-              timerDelay=100U; //（100U == 1S）
+            ID1=osTimerNew(Time1back, osTimerOnce, NULL, NULL);  //(任务函数名，定时器类型，仅限于osTimerOnce(单次定时器)或osTimerPeriodic，定时器回调函数参数，定时器属性，当前不支持该参数，参数可为NULL )
+            if (ID1 != NULL)
+            {
+                timerDelay=100U; //（100U == 1S）
 
-              status= osTimerStart(ID1,timerDelay);  
-              // 定时器开始运行函数 osOK，表示执行成功。
-              //  osErrorParameter，表示参数错误。
-              //  osErrorResource，表示其他错误。
-              //  osErrorISR，表示在中断中调用本函数。
-              //osTimerStop,osTimerDelete也是一样。
-              if (status != osOK) {
-                  printf("Failed to start Timer1!\r\n");
-              }
-          }
-          osDelay(100U);   //延迟1秒
+                status= osTimerStart(ID1,timerDelay);  
+                // 定时器开始运行函数 osOK，表示执行成功。
+                //  osErrorParameter，表示参数错误。
+                //  osErrorResource，表示其他错误。
+                //  osErrorISR，表示在中断中调用本函数。
+                //osTimerStop,osTimerDelete也是一样。
+                if (status != osOK) {
+                    printf("Failed to start Timer1!\r\n");
+                }
+            }
+            osDelay(100U);   //延迟1秒
 
-          //STOP（暂停定时器）
-          status = osTimerStop(ID1);  //暂停定时器并将返回值存入状态量
-          if (status == osOK){
-              printf("the time1 is stop success\r\n");
-          }
-          else{
-              printf("the time1 is stop failed\r\n");
-          }
+            //STOP（暂停定时器）
+            status = osTimerStop(ID1);  //暂停定时器并将返回值存入状态量
+            if (status == osOK){
+                printf("the time1 is stop success\r\n");
+            }
+            else{
+                printf("the time1 is stop failed\r\n");
+            }
 
-          //Delete（删除定时器）
-          status = osTimerDelete(ID1);   //删除定时器并将返回值存入状态量
-          if (status == osOK){
-              printf("the time1 is delect success\r\n");
-          }
-          else{
-              printf("the time1 is delect failed\r\n");
-          }
-          
-          ID2=osTimerNew(Time2back, osTimerPeriodic, NULL, NULL);
-          if (ID2 != NULL)
-          {
-              timerDelay=300U;
+            //Delete（删除定时器）
+            status = osTimerDelete(ID1);   //删除定时器并将返回值存入状态量
+            if (status == osOK){
+                printf("the time1 is delect success\r\n");
+            }
+            else{
+                printf("the time1 is delect failed\r\n");
+            }
+            
+            ID2=osTimerNew(Time2back, osTimerPeriodic, NULL, NULL);
+            if (ID2 != NULL)
+            {
+                timerDelay=300U;
 
-              status= osTimerStart(ID2,timerDelay);
-              if (status != osOK) {
-                  printf("Failed to start Timer2!\r\n");
-              }
-          }
-          osDelay(600U);
-          status = osTimerStop(ID2);
-          if (status == osOK){
-              printf("the time2 is stop success!\r\n");
-          }
-          else{
-              printf("the time2 is stop failed\r\n");
-          }
-          status = osTimerDelete(ID2);
-          if (status == osOK){
-              printf("the time2 is delect success\r\n");
-          }
-          else{
-              printf("the time2 is delect failed\r\n");
-          }
-      }
-      APP_FEATURE_INIT(time_example_2);
-      ``` 
-    - `BUILD.gn`
-      ```
-      static_library("mytime") {
-          sources = [
-              "time.c"
-          ]
-          include_dirs = [
-              "//utils/native/lite/include"
-          ]
-      }
-      ``` 
+                status= osTimerStart(ID2,timerDelay);
+                if (status != osOK) {
+                    printf("Failed to start Timer2!\r\n");
+                }
+            }
+            osDelay(600U);
+            status = osTimerStop(ID2);
+            if (status == osOK){
+                printf("the time2 is stop success!\r\n");
+            }
+            else{
+                printf("the time2 is stop failed\r\n");
+            }
+            status = osTimerDelete(ID2);
+            if (status == osOK){
+                printf("the time2 is delect success\r\n");
+            }
+            else{
+                printf("the time2 is delect failed\r\n");
+            }
+        }
+        APP_FEATURE_INIT(time_example_2);
+        ``` 
+      - `BUILD.gn`
+        ```
+        static_library("mytime") {
+            sources = [
+                "time.c"
+            ]
+            include_dirs = [
+                "//utils/native/lite/include"
+            ]
+        }
+        ``` 
 
 ### 说明
     

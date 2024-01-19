@@ -163,15 +163,6 @@ void HelloWorld(void)
     printf("[DEMO] Hello world.\n");
 }
 SYS_RUN(HelloWorld);
-#include <stdio.h>
-#include "ohos_init.h"
-#include "ohos_types.h"
-
-void HelloWorld(void)
-{
-    printf("[DEMO] Hello world.\n");
-}
-SYS_RUN(HelloWorld);
 ```
 
 编写用于将业务构建成静态库的`BUILD.gn`文件。
@@ -180,14 +171,6 @@ SYS_RUN(HelloWorld);
 
 如步骤1所述，BUILD.gn文件由三部分内容（目标、源文件、头文件路径）构成，需由开发者完成填写。
 ```
-static_library("myapp") {
-    sources = [
-        "hello_world.c"
-    ]
-    include_dirs = [
-        "//utils/native/lite/include"
-    ]
-}
 static_library("myapp") {
     sources = [
         "hello_world.c"
@@ -1080,8 +1063,10 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
 
 ​ 售票的逻辑很简单，只要票数大于零，还有票能卖，那就在此基础上减掉一。问题就在于，**两个线程同时在count = 1的时候通过了if判断，都执行的count–；那么就会出现了count = -1，也就是票数为负 的bug结果。**
 
-​ 互斥锁的出现就很好地解决了一个问题，他能够阻止上面两个线程同时访问资源的同步行为，也就是说当一个线程进入这个if语句后，别的线程都不能进入。形象起来说，就像对这段代码加了锁，只有有钥匙的线程才能够访问它。
+​ 互斥锁的出现就很好地解决了一个问题，他能够阻止上面两个线程同时访问资源的同步行为，也就是说当一个线程进入这个if语句后，别的线程都不能进入。形象起来说，就像对这段代码加了锁，只有有钥匙的线程才能够访问它。  
+![Alt text](./图床/23.png)
 ![Alt text](./图床/20.png)
+
 
 #### 互斥锁的使用流程
 1. 新建样例目录  
@@ -1378,8 +1363,26 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
 ### 信号量
 
 #### 信号量介绍
+​ 对大部分初学者而言，这又是一个新名词，什么是信号量？其实他跟我们上篇介绍的互斥锁很像。互斥锁是在多线程中允许一个线程访问资源，信号量是在多线程中允许多个线程访问资源。  
+![Alt text](./图床/24.png)
 
+​ 初学者一定会感到困惑，为了解决多线程访问资源的风险我们限制只能有一个线程在某一时刻访问资源，现在这个信号量怎么有允许多个线程访问资源呢。笔者刚开始也比较困惑，结合一些案例理解后，也是明白了这样的设计初衷。实际上，信号量，互斥锁本就是两种不同的多形成同步运行机制，在特定的应用场景下，有特定的需求，而信号量，互斥锁可以满足不同的需求，具体是什么需求呢，举个例子给大家。
+
+​ 卖票，我们的确需要互斥锁解决多线程可能带来的错误，那么如果是验票呢，为了提高效率，我们开设多个入口同时验票且不会发生冲突，信号量就做到了限制线程数量访问资源的作用。如果我们不限制并发的数量，我们的程序占用资源可能会非常大，甚至崩溃，就像检票的入口没有被明确入口数量一样，门口的人们会乱成一片。
 #### 信号量的使用流程
+1. 新建样例目录
+  `applications/sample/wifi-iot/app/semaphore_demo`
+
+2. 新建源文件和gn文件
+  `applications/sample/wifi-iot/app/semaphore_demo/semaphore.c`
+  `applications/sample/wifi-iot/app/semaphore_demo/BUILD.gn`
+
+3. 介绍信号量
+   - 如何创建信号量？
+     - 我们回顾一下在创建互斥锁的时候会有ID这样一个说法，那么信号量也是如此。
+     - 先创建ID
+       ```
+       ``` 
 
 #### 
 

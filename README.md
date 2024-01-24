@@ -1375,7 +1375,7 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
 1. 新建样例目录
   `applications/sample/wifi-iot/app/semaphore_demo`
 
-2. 新建源文件和gn文件
+2. 新建源文件和gn文件  
   `applications/sample/wifi-iot/app/semaphore_demo/semaphore.c`
   `applications/sample/wifi-iot/app/semaphore_demo/BUILD.gn`
 

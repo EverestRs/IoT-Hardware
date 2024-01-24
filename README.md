@@ -1373,10 +1373,10 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
 ​ 卖票，我们的确需要互斥锁解决多线程可能带来的错误，那么如果是验票呢，为了提高效率，我们开设多个入口同时验票且不会发生冲突，信号量就做到了限制线程数量访问资源的作用。如果我们不限制并发的数量，我们的程序占用资源可能会非常大，甚至崩溃，就像检票的入口没有被明确入口数量一样，门口的人们会乱成一片。
 #### 信号量的使用流程
 1. 新建样例目录
-  `applications/sample/wifi-iot/app/semaphore_demo`
+  `applications/sample/wifi-iot/app/semaphore_demo`  
 
 2. 新建源文件和gn文件  
-  `applications/sample/wifi-iot/app/semaphore_demo/semaphore.c`
+  `applications/sample/wifi-iot/app/semaphore_demo/semaphore.c`  
   `applications/sample/wifi-iot/app/semaphore_demo/BUILD.gn`
 
 3. 介绍信号量

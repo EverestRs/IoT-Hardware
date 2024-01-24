@@ -1048,6 +1048,8 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
             ]
         }
         ``` 
+      - 执行效果
+         ![Alt text](./图床/26.png)
 软件定时器的API相对较少，这里还是提供所有的软件定时器API
 1. [CMSIS_OS2 Timer API](https://arm-software.github.io/CMSIS_5/RTOS2/html/os2MigrationFunctions.html#mig_timer)
 
@@ -1381,8 +1383,116 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
    - 如何创建信号量？
      - 我们回顾一下在创建互斥锁的时候会有ID这样一个说法，那么信号量也是如此。
      - 先创建ID
-       ```
+       ```c
+       osSemaphoreId_t osSemaphoreNew(uint32_t max_count, uint32_t initial_count, const osSemaphoreAttr_t *attr);
        ``` 
+       > `max_count`：最大容量量，我们的资源最大能被多少线程访问
+         `initial_count`：初始容纳量，我们当前实际能有多少线程访问资源，因为一个信号对应一个线程的许可。
+         `attr`：信号量属性，一般填NULL
+         返回值：信号量的id
+     - 获取信号量
+       ```
+       osStatus_t osSemaphoreAcquire(osSemaphoreId_t semaphore_id, uint32_t timeout);
+       ``` 
+       > `semaphore_id`：信号量的id
+          `timeout`：等待时长，我们往往会在timoeout处设置为 oswaitForever
+          返回值：信号量的状态
+      - 释放信号量
+        ```c
+        osStatus_t osSemaphoreRelease(osSemaphoreId_t semaphore_id);
+        ``` 
+        > 很简单，传入信号量的id，就可以释放一个信号量出来。
+
+      其他的API请参考：[Semaphore API](https://arm-software.github.io/CMSIS_5/RTOS2/html/os2MigrationFunctions.html#mig_sem)
+
+4. 编写源码
+    - `semaphore.c`
+      ```c
+      #include <stdio.h>
+      #include <string.h>
+      #include <unistd.h>
+
+      #include "cmsis_os2.h"
+      #include "ohos_init.h"
+
+      osSemaphoreId_t ID;
+
+      void Thread_1(void)
+      {
+          while(1){
+            //释放两次ID信号量，使得Thread_2和Thread_3能同步执行
+            //此处若只释放一次信号量，则Thread_2和Thread_3会交替运行
+              osSemaphoreRelease(ID);
+              osSemaphoreRelease(ID);
+              printf("Release success!\r\n");
+              osDelay(100);
+          }
+          
+      }
+      void Thread_2(void)
+      {
+          while(1){
+            
+              //申请ID信号量
+              osSemaphoreAcquire(ID,osWaitForever);
+              printf("Thread_2 Acquire success!\r\n");
+              osDelay(1);
+          }
+      }
+      void Thread_3(void)
+      {
+          while(1){
+              //申请ID信号量
+              osSemaphoreAcquire(ID,osWaitForever);
+              printf("Thread_3 Acquire success!\r\n");
+              osDelay(1);
+          }
+      }
+      void semphore (void)
+      {
+          osThreadAttr_t attr;
+          attr.attr_bits=0U;
+          attr.cb_mem=NULL;
+          attr.cb_size=0U;
+          attr.stack_mem=NULL;
+          attr.stack_size=1024*4;
+          attr.priority=25;
+
+          attr.name=Thread_1;
+          if (osThreadNew((osThreadFunc_t)Thread_1,NULL,&attr)==NULL){
+              printf("Failed to create Theard_1!\r\n");
+          }
+
+          attr.name=Thread_2;
+          if (osThreadNew((osThreadFunc_t)Thread_2,NULL,&attr)==NULL){
+              printf("Failed to create Thread_2!\r\n");
+          }
+
+          attr.name=Thread_3;
+          if (osThreadNew((osThreadFunc_t)Thread_3,NULL,&attr)==NULL){
+              printf("Failed to create Thread_3!\r\n");
+          }
+
+          ID=osSemaphoreNew(4,0,NULL);
+          if (ID == NULL){
+              printf("Failed to create ID!\r\n");
+          }
+      }
+      APP_FEATURE_INIT(semphore);
+      ``` 
+    - `BUILD.gn`
+      ```
+      static_library("mysemaphore_2") {
+          sources = [
+              "semaphore_2.c"
+          ]
+          include_dirs = [
+              "//utils/native/lite/include"
+          ]
+      }
+      ``` 
+    - 执行效果
+      ![Alt text](./图床/25.png)
 
 #### 
 

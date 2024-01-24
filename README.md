@@ -1386,17 +1386,17 @@ osThreadId_t newThread(char *name, osThreadFunc_t func, void *arg){
        ```c
        osSemaphoreId_t osSemaphoreNew(uint32_t max_count, uint32_t initial_count, const osSemaphoreAttr_t *attr);
        ``` 
-       > `max_count`：最大容量量，我们的资源最大能被多少线程访问
-         `initial_count`：初始容纳量，我们当前实际能有多少线程访问资源，因为一个信号对应一个线程的许可。
-         `attr`：信号量属性，一般填NULL
-         返回值：信号量的id
+       > `max_count`：最大容量量，我们的资源最大能被多少线程访问  
+         `initial_count`：初始容纳量，我们当前实际能有多少线程访问资源，因为一个信号对应一个线程的许可。  
+         `attr`：信号量属性，一般填NULL  
+         返回值：信号量的id  
      - 获取信号量
        ```
        osStatus_t osSemaphoreAcquire(osSemaphoreId_t semaphore_id, uint32_t timeout);
        ``` 
-       > `semaphore_id`：信号量的id
-          `timeout`：等待时长，我们往往会在timoeout处设置为 oswaitForever
-          返回值：信号量的状态
+       > `semaphore_id`：信号量的id  
+          `timeout`：等待时长，我们往往会在timoeout处设置为 oswaitForever  
+          返回值：信号量的状态  
       - 释放信号量
         ```c
         osStatus_t osSemaphoreRelease(osSemaphoreId_t semaphore_id);
